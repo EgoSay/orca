@@ -5338,6 +5338,20 @@
             "manage": "管理「{{value0}}」的项目…",
             "manageAllDisabled": "「全部」没有成员可管",
             "create": "新建空间…"
+          },
+          "SpaceCreateSheet": {
+            "title": "新建空间",
+            "namePlaceholder": "写作 / 客户 Acme / 读论文",
+            "name": "名称",
+            "cancel": "取消",
+            "createAndSwitch": "创建并切换"
+          },
+          "SpaceMemberList": {
+            "alsoIn": "也在 {{value0}}"
+          },
+          "SpaceMemberSheet": {
+            "title": "「{{value0}}」的项目",
+            "done": "完成"
           }
         }
       },

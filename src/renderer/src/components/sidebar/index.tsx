@@ -15,6 +15,7 @@ import { ActivityThreadCollapseContext } from '@/components/activity/activity-th
 import { useSidebarProjectDrop } from './useSidebarProjectDrop'
 import { useWorkspaceBoardPanel } from './useWorkspaceBoardPanel'
 import { useWorkspaceRevealBodyRedirect } from './use-workspace-reveal-body-redirect'
+import { useSpaceDialogs } from './spaces/use-space-dialogs'
 import { resolveLeftSidebarStyleVariables } from '@/lib/left-sidebar-appearance'
 import { useSystemPrefersDark } from '@/components/terminal-pane/use-system-prefers-dark'
 import { lazyWithRetry } from '@/lib/lazy-with-retry'
@@ -108,6 +109,7 @@ function Sidebar({
     solidifyWorkspaceBoardFromDrag,
     cancelWorkspaceBoardDragPreview
   } = useWorkspaceBoardPanel()
+  const spaceDialogs = useSpaceDialogs()
 
   const setLiveSidebarWidth = React.useCallback((width: number) => {
     document.documentElement.style.setProperty('--workspace-sidebar-live-width', `${width}px`)
@@ -199,9 +201,8 @@ function Sidebar({
                 workspaceBoardOpen={workspaceBoardOpen}
                 workspaceBoardDragPreviewOpen={workspaceBoardDragPreviewOpen}
                 onWorkspaceBoardToggle={toggleWorkspaceBoard}
-                // Why no-ops: Task 10 wires the manage-members and create-space dialogs.
-                onManageSpaceMembers={() => {}}
-                onCreateSpace={() => {}}
+                onManageSpaceMembers={spaceDialogs.openMembers}
+                onCreateSpace={spaceDialogs.openCreate}
               />
             </div>
           </>
@@ -252,6 +253,7 @@ function Sidebar({
         {activeModal === 'confirm-orca-yaml-hooks' ? <OrcaYamlTrustDialog /> : null}
         {activeModal === 'forget-ssh-workspace' ? <ForgetSshWorkspaceDialog /> : null}
       </React.Suspense>
+      {spaceDialogs.dialogs}
       {sidebarOpen ? (
         <WorkspaceKanbanDrawer
           leftSidebarStyle={leftSidebarStyle}

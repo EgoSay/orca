@@ -6286,6 +6286,20 @@
             "manage": "Manage projects in {{value0}}…",
             "manageAllDisabled": "All has no members to manage",
             "create": "New space…"
+          },
+          "SpaceCreateSheet": {
+            "title": "New space",
+            "namePlaceholder": "Writing / Client Acme / Papers",
+            "name": "Name",
+            "cancel": "Cancel",
+            "createAndSwitch": "Create and switch"
+          },
+          "SpaceMemberList": {
+            "alsoIn": "Also in {{value0}}"
+          },
+          "SpaceMemberSheet": {
+            "title": "Projects in {{value0}}",
+            "done": "Done"
           }
         }
       },
