@@ -909,3 +909,39 @@ describe('computeVisibleWorktreeIds', () => {
     expect(result).toEqual([child.id])
   })
 })
+
+describe('activeSpaceRepoIds', () => {
+  it('filters to member repos, keeps 全部 when undefined, and forces the active worktree visible', () => {
+    const a = makeWorktree('a', 'repo-a')
+    const b = makeWorktree('b', 'repo-b')
+    const worktreesByRepo = { 'repo-a': [a], 'repo-b': [b] }
+    const opts = visibleOptions({
+      repoMap: new Map([
+        ['repo-a', makeRepo('repo-a', 'Repo A', '#000')],
+        ['repo-b', makeRepo('repo-b', 'Repo B', '#111')]
+      ])
+    })
+
+    expect(
+      computeVisibleWorktreeIds(worktreesByRepo, ['a', 'b'], {
+        ...opts,
+        activeSpaceRepoIds: new Set(['repo-a'])
+      })
+    ).toEqual(['a'])
+
+    expect(
+      computeVisibleWorktreeIds(worktreesByRepo, ['a', 'b'], {
+        ...opts,
+        activeSpaceRepoIds: undefined
+      })
+    ).toEqual(['a', 'b'])
+
+    expect(
+      computeVisibleWorktreeIds(worktreesByRepo, ['a', 'b'], {
+        ...opts,
+        activeSpaceRepoIds: new Set(['repo-a']),
+        forcedVisibleWorktreeIds: ['b']
+      })
+    ).toEqual(['a', 'b'])
+  })
+})

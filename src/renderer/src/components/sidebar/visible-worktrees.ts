@@ -45,6 +45,7 @@ import {
 import { isDefaultBranchWorkspace } from './default-branch-workspace'
 import { getLineageAncestorIndex, getSortedWorktreeRankIndex } from './visible-worktree-indexes'
 import { addVisibleLineageAncestors } from './visible-worktree-lineage-ancestors'
+import { selectActiveSpaceRepoIds } from '@/store/spaces/space-catalog'
 
 /**
  * Whether the "Hide sleeping" sweep must keep this row (#8873).
@@ -79,6 +80,8 @@ type VisibleWorktreeOptions = {
   worktreeLineageById: Record<string, WorktreeLineage>
   injectLineageAncestors?: boolean
   forcedVisibleWorktreeIds?: readonly string[]
+  /** Repo ids of the active Space's members; undefined ≡ 全部 (no filter). */
+  activeSpaceRepoIds?: ReadonlySet<string>
 }
 
 export function computeVisibleWorktrees(
@@ -130,6 +133,12 @@ export function computeVisibleWorktrees(
       const hostId = getWorktreeExecutionHostId(w, repo, opts.defaultHostId)
       return visibleHostIdSet.has(hostId)
     })
+  }
+
+  // Why: symmetric with the host filter above — presence, not a mode flag.
+  if (opts.activeSpaceRepoIds) {
+    const spaceRepoIds = opts.activeSpaceRepoIds
+    all = all.filter((w) => spaceRepoIds.has(w.repoId))
   }
 
   // Filter by repo
@@ -258,7 +267,8 @@ export function buildVisibleWorktreeOptionsFromState(
     workspaceHostScope: state.workspaceHostScope,
     visibleWorkspaceHostIds: state.visibleWorkspaceHostIds,
     defaultHostId: getSettingsFocusedExecutionHostId(state.settings),
-    worktreeLineageById: state.worktreeLineageById
+    worktreeLineageById: state.worktreeLineageById,
+    activeSpaceRepoIds: selectActiveSpaceRepoIds(state)
   }
 }
 
