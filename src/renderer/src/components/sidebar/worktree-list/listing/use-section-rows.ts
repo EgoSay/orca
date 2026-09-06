@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '@/store'
 import type { AppState } from '@/store/types'
+import { selectActiveSpaceRepoIds } from '@/store/spaces/space-catalog'
 import type { FolderWorkspace } from '../../../../../../shared/folder-workspace-types'
 import type { ProjectGroup } from '../../../../../../shared/project-group-types'
 import type { ProjectOrderBy } from '../../../../../../shared/ui-chrome-types'
@@ -70,6 +71,7 @@ function collectRenderedSidebarRowKeys(sectionRows: ReturnType<typeof addHostSec
 // tier wrapped around them.
 export function useSidebarSectionRows(args: SectionRowsArgs) {
   const { repos, worktrees, repoMap, effectiveCollapsedGroups, defaultHostId } = args
+  const activeSpaceRepoIds = useAppStore(selectActiveSpaceRepoIds)
   const worktreesByRepo = useAppStore((s) => s.worktreesByRepo)
   const sshTargetLabels = useAppStore((s) => s.sshTargetLabels)
   const sshConnectionStates = useAppStore((s) => s.sshConnectionStates)
@@ -165,7 +167,9 @@ export function useSidebarSectionRows(args: SectionRowsArgs) {
         args.visibleFolderWorkspacesForRows,
         hostLabelById,
         defaultHostId,
-        args.pinnedDisplayPolicy
+        args.pinnedDisplayPolicy,
+        activeSpaceRepoIds,
+        repos
       ),
     [
       args.groupBy,
@@ -188,6 +192,8 @@ export function useSidebarSectionRows(args: SectionRowsArgs) {
       args.newExternalWorktreesInboxByRepo,
       pendingCreations,
       hostLabelById,
+      activeSpaceRepoIds,
+      repos,
       args.pinnedDisplayPolicy
     ]
   )

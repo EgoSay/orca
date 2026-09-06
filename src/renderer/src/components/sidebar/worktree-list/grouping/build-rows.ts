@@ -70,13 +70,22 @@ export function buildRows(
   folderWorkspaces: readonly FolderWorkspace[] = [],
   hostLabelById?: ReadonlyMap<string, string>,
   defaultHostId: ExecutionHostId = LOCAL_EXECUTION_HOST_ID,
-  pinnedDisplayPolicy: PinnedWorktreeDisplayPolicy = getPinnedWorktreeDisplayPolicy(settings)
+  pinnedDisplayPolicy: PinnedWorktreeDisplayPolicy = getPinnedWorktreeDisplayPolicy(settings),
+  activeSpaceRepoIds?: ReadonlySet<string>,
+  repos?: readonly Pick<Repo, 'id' | 'projectGroupId'>[]
 ): Row[] {
   const result: Row[] = []
   const projectIndex = buildProjectGroupingIndex(projectGrouping)
   // Membership is decided once, above the groupBy switch: every mode renders the
   // same set of folder workspaces and only chooses where they land (#15362).
-  const renderableFolderWorkspaces = getRenderableFolderWorkspaces(folderWorkspaces, projectGroups)
+  const renderableFolderWorkspaces = getRenderableFolderWorkspaces(
+    folderWorkspaces,
+    projectGroups,
+    {
+      activeSpaceRepoIds,
+      repos: repos ?? [...repoMap.values()]
+    }
+  )
   const cyclicLineageIds = nestLineage
     ? getCyclicProjectedWorktreeLineageIds(lineageById, worktreeMap)
     : new Set<string>()

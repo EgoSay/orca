@@ -28,6 +28,7 @@ export const EMPTY_PROJECT_GROUPS: readonly ProjectGroup[] = []
 export type VirtualizedWorktreeViewportProps = {
   rows: HostSectionRow[]
   activeWorktreeId: string | null
+  activeSpaceRepoIds?: ReadonlySet<string>
   activeWorkspaceExecutionHostId: ExecutionHostId | null
   currentWorktreeId: string | null
   groupBy: WorktreeGroupBy

@@ -50,6 +50,8 @@ function buildSidebarRows(options: {
   projectGroups?: readonly ProjectGroup[]
   worktrees?: (typeof worktree)[]
   collapsedGroups?: Set<string>
+  activeSpaceRepoIds?: ReadonlySet<string>
+  repos?: readonly Pick<Repo, 'id' | 'projectGroupId'>[]
 }): Row[] {
   const worktrees = options.worktrees ?? [worktree]
   return buildRows(
@@ -71,7 +73,12 @@ function buildSidebarRows(options: {
     new Map(),
     [],
     undefined,
-    options.folderWorkspaces ?? [makeFolderWorkspace()]
+    options.folderWorkspaces ?? [makeFolderWorkspace()],
+    undefined,
+    undefined,
+    undefined,
+    options.activeSpaceRepoIds,
+    options.repos
   )
 }
 
@@ -176,6 +183,17 @@ describe('membership is decided once, not per mode', () => {
     // Parity with today's behaviour: nothing filters folder workspaces by
     // isArchived, so a mode must not be the thing that hides one.
     expect(counts).toEqual([1, 1, 1, 1])
+  })
+})
+
+describe('space wiring reaches buildRows', () => {
+  it('hides a folder workspace when no repo in its group subtree is in the active space', () => {
+    const rows = buildSidebarRows({
+      groupBy: 'workspace-status',
+      activeSpaceRepoIds: new Set(['some-other-repo']),
+      repos: [GROUPED_REPO]
+    })
+    expect(folderRows(rows)).toHaveLength(0)
   })
 })
 

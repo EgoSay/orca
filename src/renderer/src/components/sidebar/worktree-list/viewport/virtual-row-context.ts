@@ -120,6 +120,7 @@ export function buildWorktreeVirtualRowContext(args: BuildArgs): WorktreeVirtual
       worktreePointerDragRef: runtime.worktreePointerDragRef,
       nativeLineageDropTargetId: runtime.nativeLineageDropTargetId,
       activeWorktreeId: props.activeWorktreeId,
+      activeSpaceRepoIds: props.activeSpaceRepoIds,
       activeWorkspaceExecutionHostId: props.activeWorkspaceExecutionHostId,
       currentWorktreeId: props.currentWorktreeId,
       highlightedRevealRowKey: reveal.highlightedRevealRowKey,

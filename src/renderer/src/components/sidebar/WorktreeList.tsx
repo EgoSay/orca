@@ -286,6 +286,7 @@ const WorktreeList = React.memo(function WorktreeList({
         activeWorktreeId={
           activeView === 'tasks' || activeView === 'activity' ? null : currentSidebarWorktreeId
         }
+        activeSpaceRepoIds={filterState.activeSpaceRepoIds}
         activeWorkspaceExecutionHostId={activeWorkspaceExecutionHostId}
         currentWorktreeId={currentSidebarWorktreeId}
         groupBy={groupBy}

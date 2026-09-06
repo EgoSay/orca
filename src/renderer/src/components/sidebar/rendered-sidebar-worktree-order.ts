@@ -7,6 +7,7 @@ import {
 } from '../../../../shared/execution-host'
 import { getRepoMapFromState, getWorktreeMapFromState } from '@/store/selectors'
 import { getProjectHostSetupProjectionFromState } from '@/store/project-host-setup-selector'
+import { selectActiveSpaceRepoIds } from '@/store/spaces/space-catalog'
 import { buildRows } from './worktree-list/grouping/build-rows'
 import { getPinnedWorktreeDisplayPolicy } from './worktree-list/grouping/row-types'
 import { addHostSectionRows } from './host-section-rows'
@@ -82,7 +83,9 @@ export function computeRenderedSidebarWorktrees(
     // Why no hostLabelById: it only feeds display-only host context labels, never row order.
     undefined,
     defaultHostId,
-    pinnedDisplayPolicy
+    pinnedDisplayPolicy,
+    selectActiveSpaceRepoIds(state),
+    state.repos
   )
 
   // Why lazy: with no host filter, addHostSectionRows is a pass-through, so skip building the whole host registry on a keystroke.

@@ -67,6 +67,7 @@ export function WorktreeCardHeader({
     isRuntimeDisconnected,
     runtimeHostLabel,
     visibleCardTitle,
+    isGuestInActiveSpace,
     isDeleting,
     showUnreadEmphasis,
     setTitleRenaming,
@@ -183,6 +184,15 @@ export function WorktreeCardHeader({
           }
           onBeginEditingConsumed={affiliateListMode ? undefined : () => setRenamingWorktreeId(null)}
         />
+
+        {isGuestInActiveSpace && (
+          <Badge
+            variant="outline"
+            className="h-[16px] px-1.5 text-[10px] font-medium rounded shrink-0 leading-none text-amber-700 dark:text-amber-300 border-amber-500/30 bg-amber-500/5"
+          >
+            {translate('auto.components.sidebar.worktree.list.rows.item.row.guest', 'Guest')}
+          </Badge>
+        )}
 
         {typeof worktree.firstAgentMessageRenameError === 'string' &&
         worktree.firstAgentMessageRenameError.length > 0 &&
