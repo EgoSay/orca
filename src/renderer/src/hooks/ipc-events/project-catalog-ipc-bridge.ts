@@ -91,6 +91,12 @@ export function registerProjectCatalogIpcBridge(
     }) ?? (() => {})
   )
 
+  unsubs.push(
+    window.api.spaces.onChanged(() => {
+      void useAppStore.getState().loadSpaces()
+    })
+  )
+
   if (window.api.gh?.onPRRefreshEvent) {
     unsubs.push(
       window.api.gh.onPRRefreshEvent((event) => {

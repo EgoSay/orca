@@ -28,6 +28,7 @@ export type StartupActions = Pick<
   | 'setHydrationSucceeded'
   | 'pruneLastVisitedTimestamps'
   | 'seedActiveWorktreeLastVisitedIfMissing'
+  | 'loadSpaces'
 >
 
 let cachedStartupActions: StartupActions | null = null
@@ -67,7 +68,8 @@ export function selectStartupActions(state: StartupActions): StartupActions {
     cachedStartupActions.setHydrationSucceeded === state.setHydrationSucceeded &&
     cachedStartupActions.pruneLastVisitedTimestamps === state.pruneLastVisitedTimestamps &&
     cachedStartupActions.seedActiveWorktreeLastVisitedIfMissing ===
-      state.seedActiveWorktreeLastVisitedIfMissing
+      state.seedActiveWorktreeLastVisitedIfMissing &&
+    cachedStartupActions.loadSpaces === state.loadSpaces
   ) {
     return cachedStartupActions
   }
@@ -99,7 +101,8 @@ export function selectStartupActions(state: StartupActions): StartupActions {
     hydratePersistedUI: state.hydratePersistedUI,
     setHydrationSucceeded: state.setHydrationSucceeded,
     pruneLastVisitedTimestamps: state.pruneLastVisitedTimestamps,
-    seedActiveWorktreeLastVisitedIfMissing: state.seedActiveWorktreeLastVisitedIfMissing
+    seedActiveWorktreeLastVisitedIfMissing: state.seedActiveWorktreeLastVisitedIfMissing,
+    loadSpaces: state.loadSpaces
   }
   return cachedStartupActions
 }

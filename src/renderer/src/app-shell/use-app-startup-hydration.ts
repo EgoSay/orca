@@ -130,6 +130,7 @@ export function useAppStartupHydration(onOnboardingLoaded: (state: OnboardingSta
           await timeRendererStartupStep('fetch-project-groups-local', () =>
             actions.fetchProjectGroupsForAllHosts({ remoteHosts: 'skip' })
           )
+          await timeRendererStartupStep('fetch-spaces', () => actions.loadSpaces())
           await timeRendererStartupStep('fetch-folder-workspaces-local', () =>
             actions.fetchFolderWorkspacesForAllHosts({ remoteHosts: 'skip' })
           )
