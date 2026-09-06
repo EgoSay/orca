@@ -82,7 +82,10 @@ export function RepoHeaderProjectActionsMenu({
   actions: RepoHeaderProjectActions
 }): React.JSX.Element {
   const activeSpace = useAppStore(selectActiveSpace)
-  const repoSpaceMemberId = useAppStore((s) => selectSpaceMemberIdForRepo(s, repo.id))
+  // Why: skip the setup-map lookup under 全部, where the value is never read.
+  const repoSpaceMemberId = useAppStore((s) =>
+    s.activeSpaceId ? selectSpaceMemberIdForRepo(s, repo.id) : null
+  )
   return (
     <DropdownMenu modal={false}>
       <Tooltip>
@@ -169,6 +172,7 @@ export function RepoHeaderProjectActionsMenu({
           </DropdownMenuItem>
         ) : null}
         {activeSpace &&
+        repoSpaceMemberId &&
         activeSpace.memberIds.includes(repoSpaceMemberId) &&
         actions.onRemoveProjectFromSpace ? (
           <DropdownMenuItem onSelect={() => actions.onRemoveProjectFromSpace?.(repo)}>

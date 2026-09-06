@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { selectActiveSpaceRepoIds, selectSpacesContainingRepo } from './space-catalog'
+import {
+  selectActiveSpaceRepoIds,
+  selectSetupByRepoId,
+  selectSpacesContainingRepo
+} from './space-catalog'
 
 const setups = [
   {
@@ -46,5 +50,11 @@ describe('space-catalog selectors', () => {
     const state = { spaces, activeSpaceId: 'a', repos, projectHostSetups: setups }
     expect(selectSpacesContainingRepo(state, 'r1').map((s) => s.id)).toEqual(['a'])
     expect(selectSpacesContainingRepo(state, 'r2')).toEqual([])
+  })
+  it('memoizes the setup-by-repo-id map on the projectHostSetups array reference', () => {
+    const first = selectSetupByRepoId({ projectHostSetups: setups })
+    expect(selectSetupByRepoId({ projectHostSetups: setups })).toBe(first)
+    const otherSetups = [...setups] as never
+    expect(selectSetupByRepoId({ projectHostSetups: otherSetups })).not.toBe(first)
   })
 })
