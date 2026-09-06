@@ -57,27 +57,39 @@ export const createSpacesSlice: StateCreator<AppState, [], [], SpacesSlice> = (s
   },
 
   updateSpace: async (spaceId, updates) => {
-    const updated = await window.api.spaces.update({ spaceId, updates })
-    if (updated) {
-      set((s) => ({ spaces: s.spaces.map((space) => (space.id === spaceId ? updated : space)) }))
+    try {
+      const updated = await window.api.spaces.update({ spaceId, updates })
+      if (updated) {
+        set((s) => ({ spaces: s.spaces.map((space) => (space.id === spaceId ? updated : space)) }))
+      }
+    } catch (err) {
+      console.error('Failed to update space:', err)
     }
   },
 
   deleteSpace: async (spaceId) => {
-    const deleted = await window.api.spaces.delete({ spaceId })
-    if (!deleted) {
-      return
-    }
-    set((s) => ({ spaces: s.spaces.filter((space) => space.id !== spaceId) }))
-    if (get().activeSpaceId === spaceId) {
-      get().activateSpace(null)
+    try {
+      const deleted = await window.api.spaces.delete({ spaceId })
+      if (!deleted) {
+        return
+      }
+      set((s) => ({ spaces: s.spaces.filter((space) => space.id !== spaceId) }))
+      if (get().activeSpaceId === spaceId) {
+        get().activateSpace(null)
+      }
+    } catch (err) {
+      console.error('Failed to delete space:', err)
     }
   },
 
   setSpaceMembers: async (spaceId, memberIds) => {
-    const updated = await window.api.spaces.setMembers({ spaceId, memberIds })
-    if (updated) {
-      set((s) => ({ spaces: s.spaces.map((space) => (space.id === spaceId ? updated : space)) }))
+    try {
+      const updated = await window.api.spaces.setMembers({ spaceId, memberIds })
+      if (updated) {
+        set((s) => ({ spaces: s.spaces.map((space) => (space.id === spaceId ? updated : space)) }))
+      }
+    } catch (err) {
+      console.error('Failed to set space members:', err)
     }
   },
 
@@ -101,8 +113,12 @@ export const createSpacesSlice: StateCreator<AppState, [], [], SpacesSlice> = (s
   },
 
   reorderSpaces: async (orderedIds) => {
-    const spaces = await window.api.spaces.reorder({ orderedIds })
-    set({ spaces })
+    try {
+      const spaces = await window.api.spaces.reorder({ orderedIds })
+      set({ spaces })
+    } catch (err) {
+      console.error('Failed to reorder spaces:', err)
+    }
   },
 
   activateSpace: (spaceId) => {
@@ -119,7 +135,13 @@ export const createSpacesSlice: StateCreator<AppState, [], [], SpacesSlice> = (s
       lastVisitedAtByWorktreeId: state.lastVisitedAtByWorktreeId
     })
     // Why: an empty space keeps the current workspace; the guest row (Task 7) covers it.
-    if (target && target.id !== state.activeWorktreeId) {
+    // Host-qualified: the same worktree id can be registered on two execution hosts,
+    // so an id match alone doesn't mean the target is already active.
+    const alreadyActive =
+      !!target &&
+      target.id === state.activeWorktreeId &&
+      (target.hostId ?? undefined) === (state.activeWorkspaceExecutionHostId ?? undefined)
+    if (target && !alreadyActive) {
       state.setActiveWorktree(target.id, target.hostId)
     }
   }
