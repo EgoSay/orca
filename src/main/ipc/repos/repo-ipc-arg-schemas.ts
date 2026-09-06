@@ -214,6 +214,34 @@ export const ProjectGroupImportNestedArgs = z.discriminatedUnion('mode', [
   })
 ])
 
+const SpaceMemberIdSchema = z.string().regex(/^(project|repo):.+$/)
+
+export const SpaceCreateArgs = z.object({
+  name: z.string().min(1),
+  icon: z.string().nullable().optional(),
+  color: z.string().nullable().optional(),
+  memberIds: z.array(SpaceMemberIdSchema).max(500)
+})
+
+export const SpaceUpdateArgs = z.object({
+  spaceId: z.string().min(1),
+  updates: z.object({
+    name: z.string().optional(),
+    icon: z.string().nullable().optional(),
+    color: z.string().nullable().optional(),
+    sortOrder: z.number().finite().optional()
+  })
+})
+
+export const SpaceSetMembersArgs = z.object({
+  spaceId: z.string().min(1),
+  memberIds: z.array(SpaceMemberIdSchema).max(500)
+})
+
+export const SpaceSelectorArgs = z.object({ spaceId: z.string().min(1) })
+
+export const SpaceReorderArgs = z.object({ orderedIds: z.array(z.string().min(1)).max(500) })
+
 export function parseProjectGroupIpcArgs<T>(
   schema: z.ZodType<T>,
   value: unknown,
