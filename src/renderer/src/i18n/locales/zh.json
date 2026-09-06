@@ -5329,6 +5329,16 @@
           "3b7ea51793": "清除搜索",
           "7f1c2e94a5": "搜索文本过长 — 看板未被筛选",
           "9a4d0f6b21": "过长"
+        },
+        "spaces": {
+          "SpaceSwitcher": {
+            "all": "全部",
+            "switch": "切换空间，当前 {{value0}}",
+            "spaces": "空间",
+            "manage": "管理「{{value0}}」的项目…",
+            "manageAllDisabled": "「全部」没有成员可管",
+            "create": "新建空间…"
+          }
         }
       },
       "shared": {

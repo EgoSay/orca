@@ -199,6 +199,9 @@ function Sidebar({
                 workspaceBoardOpen={workspaceBoardOpen}
                 workspaceBoardDragPreviewOpen={workspaceBoardDragPreviewOpen}
                 onWorkspaceBoardToggle={toggleWorkspaceBoard}
+                // Why no-ops: Task 10 wires the manage-members and create-space dialogs.
+                onManageSpaceMembers={() => {}}
+                onCreateSpace={() => {}}
               />
             </div>
           </>

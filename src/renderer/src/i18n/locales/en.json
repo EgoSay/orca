@@ -6277,6 +6277,16 @@
           "title": "Worktree scan failed for {{value0}}",
           "retry": "Retry scan",
           "retained": "Existing worktrees are kept until a scan succeeds. Click to retry."
+        },
+        "spaces": {
+          "SpaceSwitcher": {
+            "all": "All",
+            "switch": "Switch space, current {{value0}}",
+            "spaces": "Spaces",
+            "manage": "Manage projects in {{value0}}…",
+            "manageAllDisabled": "All has no members to manage",
+            "create": "New space…"
+          }
         }
       },
       "shared": {

@@ -38,6 +38,10 @@ vi.mock('./SidebarSettingsHelpMenu', () => ({
   SidebarSettingsHelpMenu: () => <button type="button">Settings</button>
 }))
 
+vi.mock('./spaces/SpaceSwitcher', () => ({
+  SpaceSwitcher: () => <button type="button">Space switcher</button>
+}))
+
 const roots: Root[] = []
 
 async function renderToolbar(onWorkspaceBoardToggle = vi.fn()): Promise<{
@@ -56,6 +60,8 @@ async function renderToolbar(onWorkspaceBoardToggle = vi.fn()): Promise<{
         <SidebarToolbar
           workspaceBoardOpen={false}
           onWorkspaceBoardToggle={onWorkspaceBoardToggle}
+          onManageSpaceMembers={() => {}}
+          onCreateSpace={() => {}}
         />
       )
     })
