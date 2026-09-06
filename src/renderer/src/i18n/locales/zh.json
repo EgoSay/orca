@@ -4773,7 +4773,8 @@
           "hostDisconnected": "已断开连接",
           "failedNestWorkspace": "无法嵌套工作区",
           "sidebarRowMissing": "目标不再存在",
-          "failedUnnestWorkspace": "展开工作区失败"
+          "failedUnnestWorkspace": "展开工作区失败",
+          "removeFromSpace": "从「{{value0}}」移出"
         },
         "WorktreeMetaDialog": {
           "3db0a2a593": "取消",

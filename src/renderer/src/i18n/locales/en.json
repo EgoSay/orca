@@ -5643,7 +5643,8 @@
           "groupRenameFailedDesc": "Orca could not confirm the new name with the group's host. Recheck the group after reconnecting.",
           "failedNestWorkspace": "Failed to nest workspace",
           "sidebarRowMissing": "Target no longer exists",
-          "failedUnnestWorkspace": "Failed to unnest workspace"
+          "failedUnnestWorkspace": "Failed to unnest workspace",
+          "removeFromSpace": "Remove from {{value0}}"
         },
         "WorktreeMetaDialog": {
           "3db0a2a593": "Cancel",

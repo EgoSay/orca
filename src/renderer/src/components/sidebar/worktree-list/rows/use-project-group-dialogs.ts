@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import { selectProjectGroupRemovalTargets } from '@/store/slices/project-group-removal-targets'
+import { selectSpaceMemberIdForRepo } from '@/store/spaces/space-catalog'
 import type { ProjectGroup } from '../../../../../../shared/project-group-types'
 import type { Repo } from '../../../../../../shared/repo-types'
 import type { ExecutionHostId } from '../../../../../../shared/execution-host'
@@ -74,6 +75,7 @@ export function useProjectGroupDialogs(args: {
   const deleteProjectGroupWithContainedProjects = useAppStore(
     (s) => s.deleteProjectGroupWithContainedProjects
   )
+  const removeSpaceMember = useAppStore((s) => s.removeSpaceMember)
   const [nameDialog, setNameDialog] = useState<ProjectGroupNameDialogState | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<ProjectGroupDeleteDialogState | null>(null)
 
@@ -96,6 +98,17 @@ export function useProjectGroupDialogs(args: {
       void moveProjectToGroup(repo.id, null)
     },
     [moveProjectToGroup]
+  )
+
+  const handleRemoveProjectFromSpace = useCallback(
+    (repo: Repo) => {
+      const state = useAppStore.getState()
+      if (!state.activeSpaceId) {
+        return
+      }
+      void removeSpaceMember(state.activeSpaceId, selectSpaceMemberIdForRepo(state, repo.id))
+    },
+    [removeSpaceMember]
   )
 
   const handleRenameProjectGroup = useCallback(
@@ -198,6 +211,7 @@ export function useProjectGroupDialogs(args: {
     handleCreateGroupFromRepo,
     handleMoveProjectToGroup,
     handleRemoveProjectFromGroup,
+    handleRemoveProjectFromSpace,
     handleRenameProjectGroup,
     handleSubmitProjectGroupName,
     handleDeleteProjectGroup,
