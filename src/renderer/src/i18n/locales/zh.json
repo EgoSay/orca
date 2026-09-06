@@ -5347,7 +5347,8 @@
             "createAndSwitch": "创建并切换"
           },
           "SpaceMemberList": {
-            "alsoIn": "也在 {{value0}}"
+            "alsoIn": "也在 {{value0}}",
+            "folderKind": "文件夹"
           },
           "SpaceMemberSheet": {
             "title": "「{{value0}}」的项目",

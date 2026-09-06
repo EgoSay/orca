@@ -6295,7 +6295,8 @@
             "createAndSwitch": "Create and switch"
           },
           "SpaceMemberList": {
-            "alsoIn": "Also in {{value0}}"
+            "alsoIn": "Also in {{value0}}",
+            "folderKind": "Folder"
           },
           "SpaceMemberSheet": {
             "title": "Projects in {{value0}}",

@@ -1,7 +1,7 @@
 /**
- * [INPUT]: 依赖 @/store 的 repos/projectHostSetups/spaces/worktreesByRepo，store/spaces/space-catalog 的 selectSpaceMemberIdForRepo，new-workspace/use-recent-project-ids 的 orderProjectIdsByRecency
+ * [INPUT]: 依赖 @/store 的 repos/projectHostSetups/spaces/worktreesByRepo，store/spaces/space-catalog 的 selectSpaceMemberIdForRepo，new-workspace/use-recent-project-ids 的 orderProjectIdsByRecency，shared/repo-kind 的 isGitRepoKind
  * [OUTPUT]: 对外提供 SpaceMemberList 组件
- * [POS]: 新建空间与管理成员共用的勾选列表；行尾标「也在 …」
+ * [POS]: 新建空间与管理成员共用的勾选列表；文件夹仓库标「Folder」，行尾标「也在 …」
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import React, { useMemo } from 'react'
@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import type { SpaceMemberId } from '../../../../../shared/space-types'
+import { isGitRepoKind } from '../../../../../shared/repo-kind'
 import { selectSpaceMemberIdForRepo } from '@/store/spaces/space-catalog'
 import { orderProjectIdsByRecency } from '../../new-workspace/use-recent-project-ids'
 
@@ -30,7 +31,13 @@ export function SpaceMemberList({
     const recentProjectIds = orderProjectIdsByRecency(Object.values(worktreesByRepo).flat())
     const rank = new Map(recentProjectIds.map((id, i) => [id, i]))
     const seen = new Set<SpaceMemberId>()
-    const list: { memberId: SpaceMemberId; label: string; rank: number; also: string[] }[] = []
+    const list: {
+      memberId: SpaceMemberId
+      label: string
+      rank: number
+      also: string[]
+      isFolder: boolean
+    }[] = []
     for (const repo of repos) {
       const memberId = selectSpaceMemberIdForRepo({ projectHostSetups: setups }, repo.id)
       if (seen.has(memberId)) {
@@ -44,7 +51,8 @@ export function SpaceMemberList({
         rank: rank.get(projectId) ?? Number.POSITIVE_INFINITY,
         also: spaces
           .filter((s) => s.id !== excludeSpaceId && s.memberIds.includes(memberId))
-          .map((s) => s.name)
+          .map((s) => s.name),
+        isFolder: !isGitRepoKind(repo)
       })
     }
     return list.sort((a, b) => a.rank - b.rank || a.label.localeCompare(b.label))
@@ -63,6 +71,11 @@ export function SpaceMemberList({
             onCheckedChange={(on) => onToggle(row.memberId, on === true)}
           />
           <span className="truncate">{row.label}</span>
+          {row.isFolder ? (
+            <span className="rounded-sm border border-border px-1 text-[10px] leading-[14px] text-muted-foreground">
+              {translate('auto.components.sidebar.spaces.SpaceMemberList.folderKind', 'Folder')}
+            </span>
+          ) : null}
           {row.also.length > 0 ? (
             <span className="ml-auto text-[10px] text-muted-foreground">
               {translate(
