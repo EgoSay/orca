@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createSpace,
+  isSpaceMemberId,
   normalizeActiveSpaceId,
   normalizeSpaces,
   pruneMissingSpaceMembers
@@ -44,5 +45,16 @@ describe('normalizeActiveSpaceId', () => {
     expect(normalizeActiveSpaceId(spaces[0].id, spaces)).toBe(spaces[0].id)
     expect(normalizeActiveSpaceId('gone', spaces)).toBeNull()
     expect(normalizeActiveSpaceId(undefined, spaces)).toBeNull()
+  })
+})
+
+describe('isSpaceMemberId', () => {
+  it('accepts a non-empty suffix for each known prefix and rejects everything else', () => {
+    expect(isSpaceMemberId('repo:r1')).toBe(true)
+    expect(isSpaceMemberId('project:p')).toBe(true)
+    expect(isSpaceMemberId('repo:')).toBe(false)
+    expect(isSpaceMemberId('project:')).toBe(false)
+    expect(isSpaceMemberId('other:x')).toBe(false)
+    expect(isSpaceMemberId(42)).toBe(false)
   })
 })

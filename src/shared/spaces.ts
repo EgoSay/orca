@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 ./space-types 的 Space/SpaceMemberId/SpaceUpdate
+ * [INPUT]: 依赖 ./space-types 的 Space/SpaceMemberId
  * [OUTPUT]: 对外提供 createSpace、normalizeSpaceName、normalizeSpaces、pruneMissingSpaceMembers、normalizeActiveSpaceId、isSpaceMemberId
  * [POS]: Space 记录的生命周期纯函数；main 持久化与 renderer 共用，形状照抄 project-groups.ts
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -16,11 +16,12 @@ function createSpaceId(): string {
   return `space-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
+const SPACE_MEMBER_PREFIXES = ['project:', 'repo:'] as const
+
 export function isSpaceMemberId(value: unknown): value is SpaceMemberId {
   return (
     typeof value === 'string' &&
-    (value.startsWith('project:') || value.startsWith('repo:')) &&
-    value.length > 8
+    SPACE_MEMBER_PREFIXES.some((prefix) => value.startsWith(prefix) && value.length > prefix.length)
   )
 }
 
