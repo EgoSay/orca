@@ -10,6 +10,7 @@ import { ProtectedSecretPersistence } from '../../protected-secret-persistence'
 import { getDataFile, getGithubCacheFile } from './user-data-path'
 import { STALE_DURABLE_WRITE_TEMP_AGE_MS } from '../tracking-repos/worktree-metadata-normalization'
 import type { ProjectGroupPersistenceOperations } from '../tracking-repos/project-group-operations'
+import type { SpacePersistenceOperations } from '../tracking-repos/space-operations'
 import type { FolderWorkspacePersistenceOperations } from '../restoring-sessions/folder-workspace-operations'
 import type { RepoOrderPersistenceOperations } from '../tracking-repos/repo-order-operations'
 import type { ProjectHostPersistenceOperations } from '../tracking-repos/project-host-operations'
@@ -64,6 +65,7 @@ export class StoreRuntimeState {
   uiChangeListeners = new Set<(ui: PersistedState['ui']) => void>()
   projectHostOperations: ProjectHostPersistenceOperations | null = null
   projectGroupOperations: ProjectGroupPersistenceOperations | null = null
+  spaceOperations: SpacePersistenceOperations | null = null
   folderWorkspaceOperations: FolderWorkspacePersistenceOperations | null = null
   repoOrderOperations: RepoOrderPersistenceOperations | null = null
   repoUpdateOperations: RepoUpdatePersistenceOperations | null = null
