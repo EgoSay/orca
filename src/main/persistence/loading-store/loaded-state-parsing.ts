@@ -8,6 +8,7 @@ import { getDefaultPersistedState } from '../../../shared/constants'
 import { pruneLocalTerminalScrollbackBuffers } from '../../../shared/workspace-session-terminal-buffers'
 import { pruneWorkspaceSessionBrowserHistory } from '../../../shared/workspace-session-browser-history'
 import { clearMissingProjectGroupMemberships } from '../../../shared/project-groups'
+import { repairLoadedSpaces } from './spaces-load-repair'
 import { migrateWorkspaceSessionTerminalScrollbackSnapshots } from '../../terminal-scrollback-snapshots'
 import {
   isStartupDiagnosticsEnabled,
@@ -210,6 +211,12 @@ export class LoadedStateParsingOperations {
     }
 
     const repos = clearMissingProjectGroupMemberships(result.repos, result.projectGroups ?? [])
+    const spaceRepair = repairLoadedSpaces({ ...result, repos })
+    result.spaces = [...spaceRepair.spaces]
+    result.ui = { ...result.ui, activeSpaceId: spaceRepair.activeSpaceId }
+    if (spaceRepair.changed) {
+      this.runtime.loadNeedsSave = true
+    }
     const projectHostSetupCompatibility = mergeProjectHostSetupCompatibilityState(result, repos)
     if (!projectHostSetupCompatibilityStateEqual(result, projectHostSetupCompatibility)) {
       this.runtime.loadNeedsSave = true

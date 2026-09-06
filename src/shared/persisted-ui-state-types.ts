@@ -48,6 +48,8 @@ export type PersistedUIState = {
   hideSleepingWorkspaces?: boolean
   /** Which execution hosts the sidebar shows; `all` = mixed view, specific IDs focus without tearing down other hosts' sessions. */
   workspaceHostScope?: WorkspaceHostScope
+  /** null = 「全部」伪空间：永远存在、不可删、不可编辑成员。 */
+  activeSpaceId?: string | null
   /** Which execution hosts the sidebar shows; `null` = sticky all-hosts so new hosts appear automatically. */
   visibleWorkspaceHostIds?: VisibleWorkspaceHostIds
   /** User-defined sidebar order for host sections; missing/new hosts append in discovered order. */

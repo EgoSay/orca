@@ -125,6 +125,7 @@ const UiUpdateFields = z
     showSleepingWorkspaces: z.boolean().optional(),
     showInactiveWorkspaces: z.boolean().optional(),
     workspaceHostScope: z.string().optional(),
+    activeSpaceId: z.string().nullable().optional(),
     visibleWorkspaceHostIds: z.array(z.string()).nullable().optional(),
     agentsVisibleHostIds: z.array(z.string()).nullable().optional(),
     agentsFilterRepoIds: StringArray.optional(),

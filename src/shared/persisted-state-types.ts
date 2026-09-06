@@ -18,6 +18,7 @@ import type { PersistedUIState } from './persisted-ui-state-types'
 import type { ProjectGroup } from './project-group-types'
 import type { Project, ProjectHostSetup } from './project-types'
 import type { Repo } from './repo-types'
+import type { Space } from './space-types'
 import type { SparsePreset } from './worktree/create-types'
 import type { RetiredNameRegistry } from './worktree/retired-name-registry'
 import type { WorkspaceLineage, WorktreeLineage } from './worktree/lineage-types'
@@ -53,6 +54,8 @@ export type PersistedState = {
   projects: Project[]
   projectHostSetups: ProjectHostSetup[]
   projectGroups: ProjectGroup[]
+  /** 用户创作的空间；纯客户端，不上 remote wire。 */
+  spaces: Space[]
   folderWorkspaces: FolderWorkspace[]
   /** Folder-workspace review notes, keyed by FolderWorkspace.id. Top-level, NOT nested in
    *  folderWorkspaces[]: normalizeFolderWorkspaces rebuilds each record field-by-field, so an
