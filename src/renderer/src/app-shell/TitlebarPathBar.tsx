@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 ./titlebar-path-siblings 的 buildTitlebarPath，@/store 的 activateSpace/setActiveWorktree，store/spaces/space-landing 的 pickSpaceLandingWorktree，@/components/ui 的 DropdownMenu，components/sidebar/spaces/SpaceSwitcher 的 SpaceDot
+ * [INPUT]: 依赖 ./titlebar-path-siblings 的 buildTitlebarPath，@/store 的 activateSpace/setActiveWorktree，@/store/selectors 的 useAllWorktrees，store/spaces/space-landing 的 pickSpaceLandingWorktree，@/components/ui 的 DropdownMenu，components/sidebar/spaces/SpaceDot 的 SpaceDot
  * [OUTPUT]: 对外提供 TitlebarPathBar 组件
  * [POS]: 标题栏的导航仪器（Xcode jump bar）：Space › Project › Worktree 每段是兄弟选择器；与左下角切换器并存
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -13,8 +13,9 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { useAppStore } from '@/store'
+import { useAllWorktrees } from '@/store/selectors'
 import { pickSpaceLandingWorktree } from '@/store/spaces/space-landing'
-import { SpaceDot } from '../components/sidebar/spaces/SpaceSwitcher'
+import { SpaceDot } from '../components/sidebar/spaces/SpaceDot'
 import {
   ALL_SPACE_CRUMB_ID,
   buildTitlebarPath,
@@ -74,6 +75,7 @@ export function TitlebarPathBar(): React.JSX.Element | null {
   const projectHostSetups = useAppStore((s) => s.projectHostSetups)
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
   const worktreesByRepo = useAppStore((s) => s.worktreesByRepo)
+  const allWorktrees = useAllWorktrees()
   const lastVisitedAtByWorktreeId = useAppStore((s) => s.lastVisitedAtByWorktreeId)
   const activateSpace = useAppStore((s) => s.activateSpace)
   const setActiveWorktree = useAppStore((s) => s.setActiveWorktree)
@@ -85,9 +87,18 @@ export function TitlebarPathBar(): React.JSX.Element | null {
         repos,
         projectHostSetups,
         activeWorktreeId,
-        worktreesByRepo
+        worktreesByRepo,
+        allWorktrees
       }),
-    [spaces, activeSpaceId, repos, projectHostSetups, activeWorktreeId, worktreesByRepo]
+    [
+      spaces,
+      activeSpaceId,
+      repos,
+      projectHostSetups,
+      activeWorktreeId,
+      worktreesByRepo,
+      allWorktrees
+    ]
   )
   if (!path) {
     return null

@@ -26,5 +26,21 @@ export function pickSpaceLandingWorktree(args: {
       bestSeen = seen
     }
   }
-  return best ?? candidates.find((w) => w.isMainWorktree) ?? candidates[0]
+  if (best) {
+    return best
+  }
+  // Why: never visited any member — land on the main worktree of the project
+  // whose work is freshest, not whichever repo happens to sort first.
+  const mains = candidates.filter((w) => w.isMainWorktree)
+  return pickNewest(mains) ?? pickNewest(candidates) ?? candidates[0]
+}
+
+function pickNewest(worktrees: readonly Worktree[]): Worktree | null {
+  let best: Worktree | null = null
+  for (const worktree of worktrees) {
+    if (!best || worktree.lastActivityAt > best.lastActivityAt) {
+      best = worktree
+    }
+  }
+  return best
 }

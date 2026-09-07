@@ -1,12 +1,17 @@
 /**
- * [INPUT]: 依赖 store/spaces/space-catalog 的 selectActiveSpace/selectActiveSpaceRepoIds，AppState 的 repos/worktreesByRepo/activeWorktreeId，i18n/i18n 的 translate
+ * [INPUT]: 依赖 store/spaces/space-catalog 的 selectActiveSpace/selectActiveSpaceRepoIds/selectSetupByRepoId，new-workspace/use-recent-project-ids 的 orderProjectIdsByRecency，AppState 的 repos/worktreesByRepo/activeWorktreeId/allWorktrees，i18n/i18n 的 translate
  * [OUTPUT]: 对外提供 buildTitlebarPath、TitlebarCrumb/TitlebarCrumbSibling 类型、ALL_SPACE_CRUMB_ID
  * [POS]: 路径栏三段的兄弟列表派生（纯函数）；TitlebarPathBar 只负责渲染
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { AppState } from '@/store/types'
 import type { Worktree } from '../../../shared/worktree/types'
-import { selectActiveSpace, selectActiveSpaceRepoIds } from '@/store/spaces/space-catalog'
+import {
+  selectActiveSpace,
+  selectActiveSpaceRepoIds,
+  selectSetupByRepoId
+} from '@/store/spaces/space-catalog'
+import { orderProjectIdsByRecency } from '@/components/new-workspace/use-recent-project-ids'
 import { translate } from '@/i18n/i18n'
 
 export const ALL_SPACE_CRUMB_ID = 'all'
@@ -34,15 +39,16 @@ type PathState = Pick<
   | 'projectHostSetups'
   | 'activeWorktreeId'
   | 'worktreesByRepo'
->
+> & {
+  /** The cached flat list (useAllWorktrees); a per-render flatten re-ran on every status tick. */
+  allWorktrees: readonly Worktree[]
+}
 
 export function buildTitlebarPath(
   state: PathState
 ): { space: TitlebarCrumb; project: TitlebarCrumb; worktree: TitlebarCrumb } | null {
   const active = state.activeWorktreeId
-    ? Object.values(state.worktreesByRepo)
-        .flat()
-        .find((w) => w.id === state.activeWorktreeId)
+    ? state.allWorktrees.find((w) => w.id === state.activeWorktreeId)
     : undefined
   if (!active) {
     return null
@@ -75,15 +81,28 @@ export function buildTitlebarPath(
   const projectRepos = state.repos.filter(
     (r) => memberRepoIds === undefined || memberRepoIds.has(r.id) || r.id === active.repoId
   )
+  // Why: same recency order as the space member list, so the two never disagree.
+  const projectRank = new Map(
+    orderProjectIdsByRecency(state.allWorktrees).map((id, index) => [id, index])
+  )
+  const setupByRepoId = selectSetupByRepoId(state)
+  const rankOfRepo = (repoId: string): number =>
+    projectRank.get(setupByRepoId.get(repoId)?.projectId ?? '') ?? Number.POSITIVE_INFINITY
   const project: TitlebarCrumb = {
     label: repo?.displayName ?? active.repoId,
     color: null,
-    siblings: projectRepos.map((r) => ({
-      id: r.id,
-      label: r.displayName,
-      detail: `${(state.worktreesByRepo[r.id] ?? []).filter((w) => !w.isArchived).length}`,
-      current: r.id === active.repoId
-    }))
+    siblings: [...projectRepos]
+      .sort(
+        (left, right) =>
+          rankOfRepo(left.id) - rankOfRepo(right.id) ||
+          left.displayName.localeCompare(right.displayName)
+      )
+      .map((r) => ({
+        id: r.id,
+        label: r.displayName,
+        detail: `${(state.worktreesByRepo[r.id] ?? []).filter((w) => !w.isArchived).length}`,
+        current: r.id === active.repoId
+      }))
   }
   const worktree: TitlebarCrumb = {
     label: active.displayName,

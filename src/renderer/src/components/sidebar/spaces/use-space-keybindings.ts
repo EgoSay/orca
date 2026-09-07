@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 shared/keybindings 的 keybindingMatchesAction/matchKeybindingDigitIndex，shared/modifier-double-tap-detector 的 ModifierDoubleTapDetector/toModifierDoubleTapEvent，@/store 的 keybindings/spaces/activateSpace/settings.terminalShortcutPolicy，@/lib/shortcut-platform 的 getShortcutPlatform，@/lib/editable-target 的 isEditableTarget
+ * [INPUT]: 依赖 shared/keybindings 的 keybindingMatchesAction/matchKeybindingDigitIndex，shared/modifier-double-tap-detector 的 ModifierDoubleTapDetector/toModifierDoubleTapEvent，@/store 的 keybindings/spaces/activateSpace/settings.terminalShortcutPolicy，@/lib/shortcut-platform 的 getShortcutPlatform，@/lib/editable-target 的 isEditableTarget，@/lib/keybinding-context 的 getKeybindingContext
  * [OUTPUT]: 对外提供 useSpaceKeybindings
  * [POS]: Space 的全局键位监听（双击 ⌃ 开选择器、⌘⌥数字直切）；挂在 sidebar/index.tsx
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -8,24 +8,16 @@ import { useEffect, useRef } from 'react'
 import { useAppStore } from '@/store'
 import { getShortcutPlatform } from '@/lib/shortcut-platform'
 import { isEditableTarget } from '@/lib/editable-target'
+import { getKeybindingContext } from '@/lib/keybinding-context'
 import {
   keybindingMatchesAction,
   matchKeybindingDigitIndex,
-  type KeybindingContext,
   type KeybindingMatchOptions
 } from '../../../../../shared/keybindings'
 import {
   ModifierDoubleTapDetector,
   toModifierDoubleTapEvent
 } from '../../../../../shared/modifier-double-tap-detector'
-
-// Why: same xterm-helper-textarea check as app-shell/app-command-handlers.ts and
-// terminal-workspace-model.ts — each keybinding listener derives context locally.
-function getSpaceKeybindingContext(target: EventTarget | null): KeybindingContext {
-  return target instanceof HTMLElement && target.classList.contains('xterm-helper-textarea')
-    ? 'terminal'
-    : 'app'
-}
 
 export function useSpaceKeybindings({ openPicker }: { openPicker: () => void }): void {
   const openPickerRef = useRef(openPicker)
@@ -61,7 +53,7 @@ export function useSpaceKeybindings({ openPicker }: { openPicker: () => void }):
         return
       }
       const options: KeybindingMatchOptions = {
-        context: getSpaceKeybindingContext(e.target),
+        context: getKeybindingContext(e.target),
         terminalShortcutPolicy: state.settings?.terminalShortcutPolicy
       }
 

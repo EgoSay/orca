@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 @/components/ui 的 Dialog/Input/Button，./SpaceMemberList，@/store 的 createSpace/activateSpace
- * [OUTPUT]: 对外提供 SpaceCreateSheet 组件与 SPACE_COLORS/SPACE_ICONS 常量
+ * [OUTPUT]: 对外提供 SpaceCreateSheet 组件与 SPACE_COLORS（= shared/constants 的 REPO_COLORS）/SPACE_ICONS 常量
  * [POS]: 名称 + 图标 + 颜色 + 成员一步配完；建完立即 activateSpace
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -17,16 +17,12 @@ import { Input } from '@/components/ui/input'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import type { SpaceMemberId } from '../../../../../shared/space-types'
+import { REPO_COLORS } from '../../../../../shared/constants'
 import { SpaceMemberList } from './SpaceMemberList'
 
-export const SPACE_COLORS = [
-  '#1447e6',
-  '#8b5cf6',
-  '#0d9488',
-  '#c2410c',
-  '#be123c',
-  '#4d7c0f'
-] as const
+// Why: the same swatch set project badges already use — a Space dot sits beside
+// them in the sidebar, so a second palette would read as a second meaning.
+export const SPACE_COLORS = REPO_COLORS
 export const SPACE_ICONS = ['⚙️', '✍️', '🏢', '📚', '🧪', '🎧', '🛠️', '🌱'] as const
 
 export function SpaceCreateSheet({

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { pickSpaceLandingWorktree } from './space-landing'
 import type { Worktree } from '../../../../shared/worktree/types'
 
-function wt(id: string, repoId: string, isMainWorktree = false): Worktree {
+function wt(id: string, repoId: string, isMainWorktree = false, lastActivityAt = 0): Worktree {
   return {
     id,
     repoId,
@@ -20,7 +20,7 @@ function wt(id: string, repoId: string, isMainWorktree = false): Worktree {
     isUnread: false,
     isPinned: false,
     sortOrder: 0,
-    lastActivityAt: 0
+    lastActivityAt
   }
 }
 
@@ -41,6 +41,28 @@ describe('pickSpaceLandingWorktree', () => {
       lastVisitedAtByWorktreeId: {}
     })
     expect(pick?.id).toBe('a-main')
+  })
+  // Why: "first main" is repo-catalog order, which has nothing to do with where
+  // the user was working — land on the freshest project's main instead.
+  it('prefers the most recently active project main when nothing was visited', () => {
+    const stale = wt('stale-main', 'r-stale', true, 10)
+    const fresh = wt('fresh-main', 'r-fresh', true, 900)
+    const pick = pickSpaceLandingWorktree({
+      worktrees: [stale, fresh],
+      memberRepoIds: new Set(['r-stale', 'r-fresh']),
+      lastVisitedAtByWorktreeId: {}
+    })
+    expect(pick?.id).toBe('fresh-main')
+  })
+  it('falls back to the freshest member when the space has no main worktree', () => {
+    const older = wt('older', 'r1', false, 3)
+    const newer = wt('newer', 'r1', false, 40)
+    const pick = pickSpaceLandingWorktree({
+      worktrees: [older, newer],
+      memberRepoIds: new Set(['r1']),
+      lastVisitedAtByWorktreeId: {}
+    })
+    expect(pick?.id).toBe('newer')
   })
   it('returns null for an empty space and ignores archived rows', () => {
     expect(

@@ -29,7 +29,7 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
   )
 }))
 
-vi.mock('../components/sidebar/spaces/SpaceSwitcher', () => ({
+vi.mock('../components/sidebar/spaces/SpaceDot', () => ({
   SpaceDot: () => <span data-space-dot="" />
 }))
 

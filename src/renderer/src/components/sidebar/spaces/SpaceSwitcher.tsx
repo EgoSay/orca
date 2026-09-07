@@ -1,6 +1,6 @@
 /**
- * [INPUT]: 依赖 @/store 的 spaces/activeSpaceId/activateSpace，@/store/spaces/space-catalog 的 selectActiveSpace，@/hooks/useShortcutLabel 的 useShortcutKeyComboDetails，@/components/ui 的 Button/DropdownMenu，@/lib/utils 的 cn，lucide 的 ChevronDown/Plus/Settings2
- * [OUTPUT]: 对外提供 SpaceSwitcher 组件（含可选受控 open/onOpenChange 与 highlightSpaceId，供拖拽悬停驱动）、SpaceDot 组件
+ * [INPUT]: 依赖 @/store 的 spaces/activeSpaceId/activateSpace，@/store/spaces/space-catalog 的 selectActiveSpace，@/hooks/useShortcutLabel 的 useShortcutKeyComboDetails，./SpaceDot 的 SpaceDot，@/components/ui 的 Button/DropdownMenu，@/lib/utils 的 cn，lucide 的 ChevronDown/Plus/Settings2
+ * [OUTPUT]: 对外提供 SpaceSwitcher 组件（含可选受控 open/onOpenChange 与 highlightSpaceId，供拖拽悬停驱动）
  * [POS]: SidebarToolbar 左簇的空间仪器：切换、新建、管理成员、拖拽落点；路径栏（TitlebarPathBar）是导航仪器，两者并存
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -21,17 +21,8 @@ import { cn } from '@/lib/utils'
 import { selectActiveSpace } from '@/store/spaces/space-catalog'
 import type { SpaceDropTargetId } from '../project-header-drag-contract'
 import { SPACE_SWITCHER_DROP_TARGET } from './space-drop-target'
+import { SpaceDot } from './SpaceDot'
 import { useShortcutKeyComboDetails } from '@/hooks/useShortcutLabel'
-
-export function SpaceDot({ color }: { color: string | null }): React.JSX.Element {
-  return (
-    <span
-      aria-hidden="true"
-      className="inline-block size-2 shrink-0 rounded-full ring-1 ring-inset ring-black/10"
-      style={{ background: color ?? 'var(--muted-foreground)' }}
-    />
-  )
-}
 
 export function SpaceSwitcher({
   onManageMembers,

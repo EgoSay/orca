@@ -25,7 +25,7 @@ import {
 } from '@/lib/client-creation-action-error'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
 import { translate } from '@/i18n/i18n'
-import { getKeybindingContext } from './terminal-workspace-model'
+import { getKeybindingContext } from '@/lib/keybinding-context'
 import { resolveTerminalAgentTabShortcut } from './terminal-agent-tab-shortcut'
 import { handleTerminalWorkspaceEditorShortcut } from './terminal-workspace-editor-shortcuts'
 import type { TerminalActivationController } from './use-terminal-activation-actions'

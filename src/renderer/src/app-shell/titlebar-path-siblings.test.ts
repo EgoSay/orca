@@ -25,6 +25,10 @@ const baseState = {
     r1: [{ id: 'w1', repoId: 'r1', displayName: 'feat', branch: 'feat', isArchived: false }],
     r2: [{ id: 'w2', repoId: 'r2', displayName: 'main', branch: 'main', isArchived: false }]
   },
+  allWorktrees: [
+    { id: 'w1', repoId: 'r1', displayName: 'feat', branch: 'feat', isArchived: false },
+    { id: 'w2', repoId: 'r2', displayName: 'main', branch: 'main', isArchived: false }
+  ],
   lastVisitedAtByWorktreeId: {}
 }
 const state = baseState as never
@@ -54,7 +58,8 @@ describe('buildTitlebarPath', () => {
     // r2 is not a member of space 's' (memberIds only has repo:r1), but its worktree is active.
     const guestState = { ...baseState, activeWorktreeId: 'w2' } as never
     const path = buildTitlebarPath(guestState)!
-    expect(path.project.siblings.map((s) => s.id)).toEqual(['r1', 'r2'])
+    // Order is by project recency; with no ranked project both fall back to display name.
+    expect(path.project.siblings.map((s) => s.id)).toEqual(['r2', 'r1'])
     expect(path.project.siblings.find((s) => s.id === 'r2')?.current).toBe(true)
     expect(path.project.siblings.find((s) => s.id === 'r1')?.current).toBe(false)
   })
@@ -64,6 +69,45 @@ describe('buildTitlebarPath', () => {
     const path = buildTitlebarPath(allState)!
     expect(path.space.siblings.find((s) => s.id === 'all')?.current).toBe(true)
     expect(path.space.siblings.every((s) => s.id === 'all' || s.current === false)).toBe(true)
-    expect(path.project.siblings.map((s) => s.id)).toEqual(['r1', 'r2'])
+    expect(path.project.siblings.map((s) => s.id).sort()).toEqual(['r1', 'r2'])
+  })
+
+  // Why: same order as the space member list — repo-catalog order is arbitrary.
+  it('orders sibling projects by project recency', () => {
+    const recencyState = {
+      ...baseState,
+      repos: [
+        { id: 'r1', displayName: 'orca' },
+        { id: 'r2', displayName: 'blog' }
+      ],
+      spaces: [{ ...baseState.spaces[0], memberIds: ['project:p1', 'project:p2'] }],
+      projectHostSetups: [
+        { id: 'sh1', repoId: 'r1', projectId: 'p1', hostId: 'local' },
+        { id: 'sh2', repoId: 'r2', projectId: 'p2', hostId: 'local' }
+      ],
+      allWorktrees: [
+        {
+          id: 'w1',
+          repoId: 'r1',
+          projectId: 'p1',
+          displayName: 'feat',
+          branch: 'feat',
+          isArchived: false,
+          createdAt: 5
+        },
+        {
+          id: 'w2',
+          repoId: 'r2',
+          projectId: 'p2',
+          displayName: 'main',
+          branch: 'main',
+          isArchived: false,
+          createdAt: 90
+        }
+      ]
+    } as never
+
+    const path = buildTitlebarPath(recencyState)!
+    expect(path.project.siblings.map((s) => s.id)).toEqual(['r2', 'r1'])
   })
 })

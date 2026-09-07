@@ -1,5 +1,4 @@
 import type { Tab, TabContentType } from '../../../shared/tab-types'
-import type { KeybindingContext } from '../../../shared/keybindings'
 import { useAppStore } from '../store'
 import { getRuntimeEnvironmentIdForWorktree } from '@/lib/worktree-runtime-owner'
 
@@ -97,10 +96,4 @@ export function isPinnedEditorFileTab(
     (tab) =>
       tab.entityId === fileId && EDITOR_TAB_CONTENT_TYPES.has(tab.contentType) && tab.isPinned
   )
-}
-
-export function getKeybindingContext(target: EventTarget | null): KeybindingContext {
-  return target instanceof HTMLElement && target.classList.contains('xterm-helper-textarea')
-    ? 'terminal'
-    : 'app'
 }

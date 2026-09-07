@@ -19,6 +19,12 @@ describe('normalizeSpaces', () => {
   it('returns [] for non-arrays', () => {
     expect(normalizeSpaces(undefined)).toEqual([])
   })
+  // Why: an empty string reaches SpaceDot as `background: ''` — a transparent dot.
+  it('collapses an empty color to null, like icon', () => {
+    const [space] = normalizeSpaces([{ id: 'a', name: 'x', color: '', icon: '', memberIds: [] }])
+    expect(space.color).toBeNull()
+    expect(space.icon).toBeNull()
+  })
 })
 
 describe('normalizeActiveSpaceId', () => {

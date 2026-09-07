@@ -84,7 +84,7 @@ export function normalizeSpaces(value: unknown): Space[] {
       id: raw.id,
       name: normalizeSpaceName(typeof raw.name === 'string' ? raw.name : ''),
       icon: typeof raw.icon === 'string' && raw.icon.length > 0 ? raw.icon : null,
-      color: typeof raw.color === 'string' ? raw.color : null,
+      color: typeof raw.color === 'string' && raw.color.length > 0 ? raw.color : null,
       memberIds: normalizeMemberIds(raw.memberIds),
       sortOrder:
         typeof raw.sortOrder === 'number' && Number.isFinite(raw.sortOrder) ? raw.sortOrder : 0,

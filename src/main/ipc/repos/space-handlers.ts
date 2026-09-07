@@ -17,15 +17,6 @@ import {
   parseProjectGroupIpcArgs
 } from './repo-ipc-arg-schemas'
 
-export const SPACE_IPC_CHANNELS = [
-  'spaces:list',
-  'spaces:create',
-  'spaces:update',
-  'spaces:setMembers',
-  'spaces:delete',
-  'spaces:reorder'
-] as const
-
 export function notifySpacesChanged(mainWindow: BrowserWindow): void {
   if (!mainWindow.isDestroyed()) {
     mainWindow.webContents.send('spaces:changed')

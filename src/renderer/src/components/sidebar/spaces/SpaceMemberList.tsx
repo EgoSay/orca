@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 @/store 的 repos/projectHostSetups/spaces/worktreesByRepo，store/spaces/space-catalog 的 selectSpaceMemberIdForRepo，new-workspace/use-recent-project-ids 的 orderProjectIdsByRecency，shared/repo-kind 的 isGitRepoKind
+ * [INPUT]: 依赖 @/store 的 repos/projectHostSetups/spaces/worktreesByRepo，store/spaces/space-catalog 的 selectSpaceMemberIdForRepo/selectSpacesContainingRepo，new-workspace/use-recent-project-ids 的 orderProjectIdsByRecency，shared/repo-kind 的 isGitRepoKind
  * [OUTPUT]: 对外提供 SpaceMemberList 组件
  * [POS]: 新建空间与管理成员共用的勾选列表；文件夹仓库标「Folder」，行尾标「也在 …」
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -10,7 +10,10 @@ import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import type { SpaceMemberId } from '../../../../../shared/space-types'
 import { isGitRepoKind } from '../../../../../shared/repo-kind'
-import { selectSpaceMemberIdForRepo } from '@/store/spaces/space-catalog'
+import {
+  selectSpaceMemberIdForRepo,
+  selectSpacesContainingRepo
+} from '@/store/spaces/space-catalog'
 import { orderProjectIdsByRecency } from '../../new-workspace/use-recent-project-ids'
 
 export function SpaceMemberList({
@@ -28,6 +31,7 @@ export function SpaceMemberList({
   const worktreesByRepo = useAppStore((s) => s.worktreesByRepo)
 
   const rows = useMemo(() => {
+    const catalogState = { spaces, activeSpaceId: null, repos, projectHostSetups: setups }
     const recentProjectIds = orderProjectIdsByRecency(Object.values(worktreesByRepo).flat())
     const rank = new Map(recentProjectIds.map((id, i) => [id, i]))
     const seen = new Set<SpaceMemberId>()
@@ -49,8 +53,8 @@ export function SpaceMemberList({
         memberId,
         label: repo.displayName,
         rank: rank.get(projectId) ?? Number.POSITIVE_INFINITY,
-        also: spaces
-          .filter((s) => s.id !== excludeSpaceId && s.memberIds.includes(memberId))
+        also: selectSpacesContainingRepo(catalogState, repo.id)
+          .filter((s) => s.id !== excludeSpaceId)
           .map((s) => s.name),
         isFolder: !isGitRepoKind(repo)
       })

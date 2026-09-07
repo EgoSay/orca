@@ -34,6 +34,7 @@ export function useSidebarSpaceSwipe(containerRef: React.RefObject<HTMLElement |
       return
     }
     const tracker = createSwipeTracker({ threshold: 90, lockMs: 550 })
+    let resetTimeout: number | null = null
     const onWheel = (e: WheelEvent): void => {
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) {
         return
@@ -54,7 +55,14 @@ export function useSidebarSpaceSwipe(containerRef: React.RefObject<HTMLElement |
         node.style.transition = 'transform 220ms ease, opacity 220ms ease'
         node.style.transform = `translateX(${direction > 0 ? -28 : 28}px)`
         node.style.opacity = '0'
-        window.setTimeout(() => {
+        if (resetTimeout !== null) {
+          window.clearTimeout(resetTimeout)
+        }
+        // Why clear `transition` too: left behind, it animates every later layout
+        // change of the sidebar root (resize, body swap) that has nothing to do with a swipe.
+        resetTimeout = window.setTimeout(() => {
+          resetTimeout = null
+          node.style.transition = ''
           node.style.transform = ''
           node.style.opacity = ''
         }, 230)
@@ -62,6 +70,11 @@ export function useSidebarSpaceSwipe(containerRef: React.RefObject<HTMLElement |
       state.activateSpace(nextSpaceId(state.spaces, state.activeSpaceId, direction))
     }
     node.addEventListener('wheel', onWheel, { passive: false })
-    return () => node.removeEventListener('wheel', onWheel)
+    return () => {
+      node.removeEventListener('wheel', onWheel)
+      if (resetTimeout !== null) {
+        window.clearTimeout(resetTimeout)
+      }
+    }
   }, [containerRef, reduced])
 }
