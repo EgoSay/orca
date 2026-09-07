@@ -211,7 +211,7 @@ export class LoadedStateParsingOperations {
     }
 
     const repos = clearMissingProjectGroupMemberships(result.repos, result.projectGroups ?? [])
-    const spaceRepair = repairLoadedSpaces({ ...result, repos })
+    const spaceRepair = repairLoadedSpaces(result)
     result.spaces = [...spaceRepair.spaces]
     result.ui = { ...result.ui, activeSpaceId: spaceRepair.activeSpaceId }
     if (spaceRepair.changed) {

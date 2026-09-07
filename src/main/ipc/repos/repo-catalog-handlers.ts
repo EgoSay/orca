@@ -11,6 +11,7 @@ import { enrichRepoGitUsernames } from '../../repo-git-username-enrichment'
 import { enrichMissingRepoGitRemoteIdentities } from '../../repo-git-remote-identity-enrichment'
 import { invalidateAuthorizedRootsCache } from '../registered-worktree-roots-cache'
 import { notifyReposChanged } from './repos-changed-notification'
+import { notifySpacesChanged } from './space-handlers'
 import { ProjectUpdateIpcArgs, parseProjectGroupIpcArgs } from './repo-ipc-arg-schemas'
 import { listReposForExecutionHost } from './host-repo-catalog-snapshot'
 
@@ -89,6 +90,8 @@ export function registerRepoCatalogHandlers(mainWindow: BrowserWindow, store: St
     store.removeProject(args.repoId)
     invalidateAuthorizedRootsCache()
     notifyReposChanged(mainWindow)
+    // Why: removal strips the repo's member id from every space, so the switcher must re-read.
+    notifySpacesChanged(mainWindow)
   })
 
   // Why: forget a project on one execution host without disturbing the same repo id on other hosts (SSH-workspace forget flow).
@@ -102,6 +105,7 @@ export function registerRepoCatalogHandlers(mainWindow: BrowserWindow, store: St
       store.removeProjectForHost(args.repoId, hostId)
       invalidateAuthorizedRootsCache()
       notifyReposChanged(mainWindow)
+      notifySpacesChanged(mainWindow)
     }
   )
 }

@@ -26,14 +26,14 @@ function stateWith(partial: Partial<PersistedState>): PersistedState {
 }
 
 describe('repairLoadedSpaces', () => {
-  it('normalizes spaces, prunes members that do not resolve, and nulls a dangling activeSpaceId', () => {
+  it('normalizes spaces and nulls a dangling activeSpaceId', () => {
     const repaired = repairLoadedSpaces(
       stateWith({
         spaces: [
           {
             id: 'a',
             name: '开发',
-            memberIds: ['project:github:acme/app', 'repo:r-missing'],
+            memberIds: ['project:github:acme/app', 'project:github:acme/app', 'bogus'],
             sortOrder: 0
           }
         ] as unknown as PersistedState['spaces']
@@ -42,6 +42,32 @@ describe('repairLoadedSpaces', () => {
     expect(repaired.changed).toBe(true)
     expect(repaired.spaces[0].memberIds).toEqual(['project:github:acme/app'])
     expect(repaired.activeSpaceId).toBeNull()
+  })
+  it('keeps a member whose repo is absent from the local catalog (runtime-host projects)', () => {
+    const repaired = repairLoadedSpaces(
+      stateWith({
+        repos: [],
+        projectHostSetups: [],
+        spaces: [
+          {
+            id: 'a',
+            name: '开发',
+            icon: null,
+            color: null,
+            memberIds: ['project:github:acme/remote-only', 'repo:r-remote'],
+            sortOrder: 0,
+            createdAt: 1,
+            updatedAt: 1
+          }
+        ],
+        ui: { activeSpaceId: 'a' } as PersistedState['ui']
+      })
+    )
+    expect(repaired.spaces[0].memberIds).toEqual([
+      'project:github:acme/remote-only',
+      'repo:r-remote'
+    ])
+    expect(repaired.changed).toBe(false)
   })
   it('reports unchanged when spaces are already clean', () => {
     const clean = repairLoadedSpaces(

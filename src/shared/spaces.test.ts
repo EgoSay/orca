@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  createSpace,
-  isSpaceMemberId,
-  normalizeActiveSpaceId,
-  normalizeSpaces,
-  pruneMissingSpaceMembers
-} from './spaces'
+import { createSpace, isSpaceMemberId, normalizeActiveSpaceId, normalizeSpaces } from './spaces'
 
 describe('normalizeSpaces', () => {
   it('drops malformed rows, dedupes ids and member ids, sorts by sortOrder', () => {
@@ -24,18 +18,6 @@ describe('normalizeSpaces', () => {
   })
   it('returns [] for non-arrays', () => {
     expect(normalizeSpaces(undefined)).toEqual([])
-  })
-})
-
-describe('pruneMissingSpaceMembers', () => {
-  it('removes members that no longer resolve and keeps identity when unchanged', () => {
-    const input = [
-      createSpace({ name: 'x', memberIds: ['project:p1', 'repo:r9'], sortOrder: 0, now: 1 })
-    ]
-    const pruned = pruneMissingSpaceMembers(input, new Set(['project:p1']))
-    expect(pruned[0].memberIds).toEqual(['project:p1'])
-    const same = pruneMissingSpaceMembers(pruned, new Set(['project:p1']))
-    expect(same).toBe(pruned)
   })
 })
 

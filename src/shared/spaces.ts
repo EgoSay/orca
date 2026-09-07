@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 ./space-types 的 Space/SpaceMemberId
- * [OUTPUT]: 对外提供 createSpace、normalizeSpaceName、normalizeSpaces、pruneMissingSpaceMembers、normalizeActiveSpaceId、isSpaceMemberId
+ * [OUTPUT]: 对外提供 createSpace、normalizeSpaceName、normalizeSpaces、normalizeActiveSpaceId、isSpaceMemberId
  * [POS]: Space 记录的生命周期纯函数；main 持久化与 renderer 共用，形状照抄 project-groups.ts
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -98,23 +98,6 @@ export function normalizeSpaces(value: unknown): Space[] {
     (left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name)
   )
   return spaces
-}
-
-/** Returns the same array reference when nothing was pruned so callers can skip a save. */
-export function pruneMissingSpaceMembers(
-  spaces: readonly Space[],
-  validMemberIds: ReadonlySet<string>
-): readonly Space[] {
-  let changed = false
-  const pruned = spaces.map((space) => {
-    const memberIds = space.memberIds.filter((id) => validMemberIds.has(id))
-    if (memberIds.length === space.memberIds.length) {
-      return space
-    }
-    changed = true
-    return { ...space, memberIds }
-  })
-  return changed ? pruned : spaces
 }
 
 /** null is the「全部」pseudo-space; an id that no longer exists degrades to it. */

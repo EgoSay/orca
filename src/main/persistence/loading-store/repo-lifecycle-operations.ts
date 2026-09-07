@@ -13,6 +13,7 @@ import { mergeProjectHostSetupCompatibilityState } from '../tracking-repos/proje
 import { RepoOrderPersistenceOperations } from '../tracking-repos/repo-order-operations'
 import { pruneWorktreeStateForRepo as pruneWorktreeStateForRepoOperation } from '../tracking-repos/repo-worktree-pruning'
 import { collectDeregisteredRepoIds } from '../tracking-repos/deregistered-repo-residue'
+import { removeRepoFromSpaces } from '../tracking-repos/space-member-removal'
 import { retireLocalWorktreeMetadataPruneStateForRepo } from '../../local-worktree-metadata-prune-gate'
 import { hydrateRepo as hydrateRepoOperation } from '../tracking-repos/repo-hydration'
 import { RepoUpdatePersistenceOperations } from '../tracking-repos/repo-update-operations'
@@ -70,6 +71,8 @@ export class RepoLifecycleOperations {
     if (repoRemoved) {
       bumpLocalWorktreeScanGeneration(id)
     }
+    // Why: before the compatibility sync — it drops the repo-backed setup row this id resolves through.
+    removeRepoFromSpaces(this[repoLifecycleOperationsContext].runtime.state, id)
     syncProjectHostSetupCompatibilityState(this)
     // Why: presets are repo-scoped and unreachable once the repo is gone, so drop them with it.
     delete this[repoLifecycleOperationsContext].runtime.state.sparsePresetsByRepo[id]
@@ -101,6 +104,7 @@ export class RepoLifecycleOperations {
     const idStillPresent = this[repoLifecycleOperationsContext].runtime.state.repos.some(
       (r) => r.id === id
     )
+    removeRepoFromSpaces(this[repoLifecycleOperationsContext].runtime.state, id)
     // Why: presets and retirements are repo-id-scoped (not host-scoped); drop them only when the last host's copy is gone.
     if (!idStillPresent) {
       delete this[repoLifecycleOperationsContext].runtime.state.sparsePresetsByRepo[id]
