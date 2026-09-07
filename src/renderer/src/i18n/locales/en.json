@@ -6303,6 +6303,11 @@
           "SpaceMemberSheet": {
             "title": "Projects in {{value0}}",
             "done": "Done"
+          },
+          "SpaceEmptyState": {
+            "title": "No projects in this space",
+            "manage": "Manage projects…",
+            "showAll": "Show all"
           }
         }
       },

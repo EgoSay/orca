@@ -13,7 +13,8 @@ project-header-drag-commit.test.ts（改动）: 配套会话新字段的测试 f
 project-header-drag.test.ts（改动）: 补充落在空间目标时的拖拽用例。
 visible-worktrees.ts（改动）: 新增 activeSpaceRepoIds 过滤（undefined ≡ 全部，与 host 过滤对称处理为存在性判断而非模式开关）；lineage 祖先注入逻辑迁出到 visible-worktree-lineage-ancestors.ts。
 visible-worktrees.test.ts（改动）: 补 activeSpaceRepoIds 用例——按成员仓库过滤、undefined 时保留全部、forcedVisibleWorktreeIds 强制可见不受空间过滤影响。
-WorktreeList.tsx（改动）: 透传 activeSpaceRepoIds/onSpaceDropHoverChange/handleRemoveProjectFromSpace 到子组件。
+WorktreeList.tsx（改动）: 透传 activeSpaceRepoIds/onSpaceDropHoverChange/handleRemoveProjectFromSpace 到子组件；无行时按「有活动空间且无过滤」在 SpaceEmptyState 与通用空态之间二选一。
+WorktreeList.space-empty-state.test.ts: 空 Space 空态与通用空态的取舍用例。
 WorktreeCard.tsx（改动）: 新增 isGuestInActiveSpace 透传给 worktree-card-header。
 worktree-card-header.tsx（改动）: isGuestInActiveSpace 为真时渲染「Guest」徽标（该工作区所属项目不是当前空间的直接成员）。
 worktree-card-model.ts（改动）: WorktreeCardProps 新增 isGuestInActiveSpace?: boolean。

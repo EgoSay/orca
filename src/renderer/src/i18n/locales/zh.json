@@ -5357,6 +5357,11 @@
           "SpaceMemberSheet": {
             "title": "「{{value0}}」的项目",
             "done": "完成"
+          },
+          "SpaceEmptyState": {
+            "title": "此空间还没有项目",
+            "manage": "管理项目…",
+            "showAll": "查看全部"
           }
         }
       },

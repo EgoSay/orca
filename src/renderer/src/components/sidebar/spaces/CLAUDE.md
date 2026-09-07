@@ -9,6 +9,7 @@ SpaceMemberList.tsx: 新建空间与管理成员共用的勾选列表；按 orde
 SpaceMemberList.test.tsx: SpaceMemberList 用例——成员归一化 id 列出、Folder 标签、「也在 …」多重归属提示。
 SpaceCreateSheet.tsx: 新建空间对话框——名称 + 图标 + 颜色 + 成员一步配完，建完立即 activateSpace；导出 SPACE_ICONS/SPACE_COLORS。
 SpaceMemberSheet.tsx: 管理某空间成员的对话框——勾选即调用 setSpaceMembers 写入，无本地草稿。
+SpaceEmptyState.tsx: 空 Space 的侧边栏空态（spec §7）——「此空间还没有项目」+ 管理项目… + 查看全部；WorktreeList 在无行且无过滤时替代通用「No workspaces found」渲染。
 use-space-dialogs.tsx: 收口 SpaceCreateSheet/SpaceMemberSheet 的开关状态，供 sidebar/index.tsx 挂载。
 use-space-keybindings.ts: 全局键位监听——双击 ⌃ 开 SpaceSwitcher（DoubleTap+Ctrl，经 ModifierDoubleTapDetector 复用检测器）、⌘⌥数字直切空间（matchKeybindingDigitIndex）；供 sidebar/index.tsx 挂载。
 use-space-keybindings.test.ts: use-space-keybindings 用例——双击 ⌃ 开选择器、数字直切、可编辑目标/终端策略下的免打扰。

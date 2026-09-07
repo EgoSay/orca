@@ -216,6 +216,7 @@ function Sidebar({
                 onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
                 onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
                 onSpaceDropHoverChange={setHoverSpaceTargetId}
+                onManageSpaceMembers={spaceDialogs.openMembers}
               />
             )}
 
