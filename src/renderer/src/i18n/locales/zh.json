@@ -88,6 +88,9 @@
       "mr": "MR",
       "port": "端口",
       "pr": "PR"
+    },
+    "filter": {
+      "spaceChip": "空间：{{value0}}"
     }
   },
   "auto": {

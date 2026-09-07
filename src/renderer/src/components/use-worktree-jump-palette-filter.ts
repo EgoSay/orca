@@ -7,6 +7,7 @@ import {
   isPaletteFilterActive,
   reconcilePaletteFilter
 } from '@/components/cmd-j/palette-filter'
+import { spaceToPaletteProjectKeys } from '@/components/cmd-j/palette-space-scope'
 import { getRepoHostIdentity } from '@/store/slices/repo-host-identity'
 import { getHostDisplayLabelOverrides } from '../../../shared/host-setting-overrides'
 import { getSettingsFocusedExecutionHostId } from '../../../shared/execution-host'
@@ -25,6 +26,8 @@ type WorktreeJumpPaletteFilterInput = Pick<
   | 'projects'
   | 'projectHostSetups'
   | 'projectGroups'
+  | 'activeSpace'
+  | 'visible'
 > &
   Pick<WorktreeJumpPaletteLocalState, 'rawFilter' | 'setRawFilter'>
 
@@ -39,6 +42,8 @@ export function useWorktreeJumpPaletteFilter({
   projects,
   projectHostSetups,
   projectGroups,
+  activeSpace,
+  visible,
   rawFilter,
   setRawFilter
 }: WorktreeJumpPaletteFilterInput) {
@@ -91,6 +96,28 @@ export function useWorktreeJumpPaletteFilter({
     setRawFilter((current) => reconcilePaletteFilter(current, filterModel))
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- local-state setter identity is stable across extraction.
   }, [filterModel])
+  const activeSpaceId = activeSpace?.id ?? null
+  // Why: seed on open (or on switching spaces while open) only — the user
+  // clearing the space chip mid-session must not be undone by a re-render.
+  useEffect(() => {
+    if (!visible || !activeSpace) {
+      return
+    }
+    const projectKeys = spaceToPaletteProjectKeys(activeSpace, filterModel).sort()
+    // Why: host chips are the user's; only the project field is space-owned.
+    setRawFilter((current) => ({ ...current, projectKeys }))
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- open-time seed; filterModel/activeSpace are read, not watched.
+  }, [visible, activeSpaceId])
+  const spaceScope = useMemo(
+    () =>
+      activeSpace
+        ? {
+            name: activeSpace.name,
+            projectKeys: spaceToPaletteProjectKeys(activeSpace, filterModel)
+          }
+        : null,
+    [activeSpace, filterModel]
+  )
   const filterActive = isPaletteFilterActive(filter)
   const hostFilterActive = filter.hostIds.length > 0
   const filterPredicate = useMemo(
@@ -119,7 +146,8 @@ export function useWorktreeJumpPaletteFilter({
     filterActive,
     hostFilterActive,
     filterPredicate,
-    groupHostIdByGroupId
+    groupHostIdByGroupId,
+    spaceScope
   }
 }
 

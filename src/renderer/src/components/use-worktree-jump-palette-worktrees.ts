@@ -15,6 +15,7 @@ import {
   searchWorktreeDocuments
 } from '@/lib/worktree-palette-search'
 import { buildPaletteWorktreeIndex, resolvePaletteWorktree } from '@/lib/palette-repo-resolution'
+import { groupWorktreeItemsByProject } from '@/components/cmd-j/palette-space-scope'
 import {
   EMPTY_PAIRED_DEVICE_IDS_BY_ENVIRONMENT,
   getPairedDeviceIdsByEnvironment,
@@ -164,14 +165,18 @@ export function useWorktreeJumpPaletteWorktrees({
       lastVisitedAtByWorktreeId
     ]
   )
+  const groupedSwitchableWorktrees = useMemo(
+    () => groupWorktreeItemsByProject(switchableWorktreesForRows, (worktree) => worktree.repoId),
+    [switchableWorktreesForRows]
+  )
   const searchScopeWorktrees = useMemo(() => {
     const scope = getWorktreePaletteSearchScope({
       hasQuery,
       allWorktrees,
-      emptyQueryWorktrees: switchableWorktreesForRows
+      emptyQueryWorktrees: groupedSwitchableWorktrees
     })
     return hasQuery && filterPredicate ? scope.filter(filterPredicate.matchesWorktree) : scope
-  }, [allWorktrees, filterPredicate, hasQuery, switchableWorktreesForRows])
+  }, [allWorktrees, filterPredicate, hasQuery, groupedSwitchableWorktrees])
   const browserSortedWorktrees = useMemo(() => {
     if (!paletteStatusInputsActive) {
       return EMPTY_SORTED_WORKTREES
@@ -281,7 +286,7 @@ export function useWorktreeJumpPaletteWorktrees({
     hasQuery,
     isLoading,
     visibleWorktreesForState,
-    switchableWorktreesForRows,
+    groupedSwitchableWorktrees,
     searchScopeWorktrees,
     browserSortedWorktrees,
     worktreeMap,

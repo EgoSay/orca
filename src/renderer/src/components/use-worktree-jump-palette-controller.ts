@@ -31,7 +31,7 @@ export function useWorktreeJumpPaletteController({
     taskSourceUrl: localState.taskSourceUrl,
     createLookupGuard
   })
-  const filter = useWorktreeJumpPaletteFilter({ ...storeState, ...localState })
+  const filter = useWorktreeJumpPaletteFilter({ ...storeState, ...localState, visible })
   const worktrees = useWorktreeJumpPaletteWorktrees({
     ...storeState,
     ...localState,
