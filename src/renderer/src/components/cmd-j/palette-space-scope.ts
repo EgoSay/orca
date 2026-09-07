@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 ./palette-filter-options 的 PaletteFilterModel，shared/space-types 的 Space，./palette-filter 的 PaletteFilterState
- * [OUTPUT]: 对外提供 spaceToPaletteProjectKeys、groupWorktreeItemsByProject、isSpaceScopeFilter、planSpaceSeed
- * [POS]: ⌘J 的空间范围：把 Space 成员映射成既有 projectKeys 过滤，判断当前过滤是否等于该范围，决定何时（重新）播种，并把空查询行按项目分块
+ * [OUTPUT]: 对外提供 spaceToPaletteProjectKeys、groupWorktreeItemsByProject、isSpaceScopeFilter、planQueryScopeFilter、planSpaceSeed
+ * [POS]: ⌘J 的空间范围：把 Space 成员映射成既有 projectKeys 过滤，判断当前过滤是否等于该范围，决定何时（重新）播种、输入查询时如何放开范围，并把空查询行按项目分块
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { Space } from '../../../../shared/space-types'
@@ -57,6 +57,21 @@ export function isSpaceScopeFilter(
   }
   const filterKeySet = new Set(filter.projectKeys)
   return spaceKeys.every((key) => filterKeySet.has(key))
+}
+
+/**
+ * Spec §6.3.3: typing a query searches every space. The seeded space chip is
+ * scope, not a user filter — drop the project axis while it is exactly the
+ * seed. The user's own project chips (not set-equal to the seed) and every
+ * host chip keep filtering. Returns the same reference when nothing changes.
+ */
+export function planQueryScopeFilter(
+  filter: PaletteFilterState,
+  spaceKeys: readonly string[] | null
+): PaletteFilterState {
+  return spaceKeys && isSpaceScopeFilter(filter, spaceKeys)
+    ? { hostIds: filter.hostIds, projectKeys: [] }
+    : filter
 }
 
 /**

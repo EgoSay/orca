@@ -7,7 +7,11 @@ import {
   isPaletteFilterActive,
   reconcilePaletteFilter
 } from '@/components/cmd-j/palette-filter'
-import { planSpaceSeed, spaceToPaletteProjectKeys } from '@/components/cmd-j/palette-space-scope'
+import {
+  planQueryScopeFilter,
+  planSpaceSeed,
+  spaceToPaletteProjectKeys
+} from '@/components/cmd-j/palette-space-scope'
 import { getRepoHostIdentity } from '@/store/slices/repo-host-identity'
 import { getHostDisplayLabelOverrides } from '../../../shared/host-setting-overrides'
 import { getSettingsFocusedExecutionHostId } from '../../../shared/execution-host'
@@ -134,6 +138,18 @@ export function useWorktreeJumpPaletteFilter({
     () => buildPaletteFilterPredicate(filter, filterModel),
     [filter, filterModel]
   )
+  /** Spec §6.3.3: what a typed query is scoped to — same object unless the space seeded it. */
+  const queryFilter = useMemo(
+    () => planQueryScopeFilter(filter, spaceScope?.projectKeys ?? null),
+    [filter, spaceScope]
+  )
+  const queryFilterPredicate = useMemo(
+    () =>
+      queryFilter === filter
+        ? filterPredicate
+        : buildPaletteFilterPredicate(queryFilter, filterModel),
+    [filter, filterModel, filterPredicate, queryFilter]
+  )
   const groupHostIdByGroupId = useMemo(
     () =>
       new Map(
@@ -156,6 +172,7 @@ export function useWorktreeJumpPaletteFilter({
     filterActive,
     hostFilterActive,
     filterPredicate,
+    queryFilterPredicate,
     groupHostIdByGroupId,
     spaceScope
   }

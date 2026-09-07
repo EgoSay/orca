@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   groupWorktreeItemsByProject,
   isSpaceScopeFilter,
+  planQueryScopeFilter,
   planSpaceSeed,
   spaceToPaletteProjectKeys
 } from './palette-space-scope'
@@ -77,5 +78,24 @@ describe('planSpaceSeed', () => {
       spaceId: 's1',
       projectKeys: ['project:p1']
     })
+  })
+})
+
+describe('planQueryScopeFilter', () => {
+  it('drops the project axis while the chips are exactly the space seed', () => {
+    const scoped = planQueryScopeFilter({ hostIds: ['ssh:a'], projectKeys: ['p2', 'p1'] }, [
+      'p1',
+      'p2'
+    ])
+    expect(scoped.projectKeys).toEqual([])
+    expect(scoped.hostIds).toEqual(['ssh:a'])
+  })
+  it('keeps the user own project chips and returns the same reference', () => {
+    const filter = { hostIds: [], projectKeys: ['p1'] }
+    expect(planQueryScopeFilter(filter, ['p1', 'p2'])).toBe(filter)
+  })
+  it('returns the same reference outside a space', () => {
+    const filter = { hostIds: [], projectKeys: ['p1'] }
+    expect(planQueryScopeFilter(filter, null)).toBe(filter)
   })
 })
