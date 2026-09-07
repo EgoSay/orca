@@ -26,6 +26,7 @@ export function buildTerminalCreateWindow(args: {
     dispatchEvent,
     api: {
       repos: { onChanged: () => () => {} },
+      spaces: { onChanged: () => () => {} },
       automations: { onChanged: () => () => {} },
       worktrees: {
         onChanged: () => () => {},

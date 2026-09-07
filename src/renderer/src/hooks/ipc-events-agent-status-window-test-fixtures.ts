@@ -23,6 +23,7 @@ export function buildWindowApi(args: {
   return {
     api: {
       repos: { onChanged: () => () => {} },
+      spaces: { onChanged: () => () => {} },
       automations: { onChanged: () => () => {} },
       worktrees: {
         onChanged: () => () => {},
