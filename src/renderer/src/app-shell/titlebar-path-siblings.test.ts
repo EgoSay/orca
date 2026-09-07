@@ -41,4 +41,29 @@ describe('buildTitlebarPath', () => {
   it('returns null without an active worktree', () => {
     expect(buildTitlebarPath({ ...baseState, activeWorktreeId: null } as never)).toBeNull()
   })
+
+  it('marks the active project and worktree current, with worktree detail set to its branch', () => {
+    const path = buildTitlebarPath(state)!
+    expect(path.project.siblings.find((s) => s.current)?.id).toBe('r1')
+    const currentWorktree = path.worktree.siblings.find((s) => s.current)
+    expect(currentWorktree?.id).toBe('w1')
+    expect(currentWorktree?.detail).toBe('feat')
+  })
+
+  it('keeps the current project listed as a guest alongside the space members', () => {
+    // r2 is not a member of space 's' (memberIds only has repo:r1), but its worktree is active.
+    const guestState = { ...baseState, activeWorktreeId: 'w2' } as never
+    const path = buildTitlebarPath(guestState)!
+    expect(path.project.siblings.map((s) => s.id)).toEqual(['r1', 'r2'])
+    expect(path.project.siblings.find((s) => s.id === 'r2')?.current).toBe(true)
+    expect(path.project.siblings.find((s) => s.id === 'r1')?.current).toBe(false)
+  })
+
+  it('lists every repo and marks 全部 current when no space is active', () => {
+    const allState = { ...baseState, activeSpaceId: null } as never
+    const path = buildTitlebarPath(allState)!
+    expect(path.space.siblings.find((s) => s.id === 'all')?.current).toBe(true)
+    expect(path.space.siblings.every((s) => s.id === 'all' || s.current === false)).toBe(true)
+    expect(path.project.siblings.map((s) => s.id)).toEqual(['r1', 'r2'])
+  })
 })

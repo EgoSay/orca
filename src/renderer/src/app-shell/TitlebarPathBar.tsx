@@ -4,9 +4,8 @@
  * [POS]: 标题栏的导航仪器（Xcode jump bar）：Space › Project › Worktree 每段是兄弟选择器；与左下角切换器并存
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import React from 'react'
+import React, { useMemo } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { useShallow } from 'zustand/react/shallow'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,18 +56,40 @@ function Crumb({
 }
 
 export function TitlebarPathBar(): React.JSX.Element | null {
-  const path = useAppStore(useShallow(buildTitlebarPath))
+  // Why: useShallow only compares the top level of what the selector returns, but
+  // buildTitlebarPath allocates fresh space/project/worktree objects on every call —
+  // the shallow compare never matches, so the bar re-rendered on every store write.
+  // Selecting the raw fields individually gives zustand stable references to diff,
+  // and useMemo below only recomputes the derived path when one of them changes.
+  const spaces = useAppStore((s) => s.spaces)
+  const activeSpaceId = useAppStore((s) => s.activeSpaceId)
+  const repos = useAppStore((s) => s.repos)
+  const projectHostSetups = useAppStore((s) => s.projectHostSetups)
+  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
+  const worktreesByRepo = useAppStore((s) => s.worktreesByRepo)
+  const lastVisitedAtByWorktreeId = useAppStore((s) => s.lastVisitedAtByWorktreeId)
   const activateSpace = useAppStore((s) => s.activateSpace)
   const setActiveWorktree = useAppStore((s) => s.setActiveWorktree)
+  const path = useMemo(
+    () =>
+      buildTitlebarPath({
+        spaces,
+        activeSpaceId,
+        repos,
+        projectHostSetups,
+        activeWorktreeId,
+        worktreesByRepo
+      }),
+    [spaces, activeSpaceId, repos, projectHostSetups, activeWorktreeId, worktreesByRepo]
+  )
   if (!path) {
     return null
   }
   const pickProject = (repoId: string): void => {
-    const state = useAppStore.getState()
     const target = pickSpaceLandingWorktree({
-      worktrees: state.worktreesByRepo[repoId] ?? [],
+      worktrees: worktreesByRepo[repoId] ?? [],
       memberRepoIds: new Set([repoId]),
-      lastVisitedAtByWorktreeId: state.lastVisitedAtByWorktreeId
+      lastVisitedAtByWorktreeId
     })
     if (target) {
       setActiveWorktree(target.id, target.hostId)
