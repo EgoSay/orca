@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 ./palette-filter-options 的 PaletteFilterModel，shared/space-types 的 Space，./palette-filter 的 PaletteFilterState
- * [OUTPUT]: 对外提供 spaceToPaletteProjectKeys、groupWorktreeItemsByProject、isSpaceScopeFilter
- * [POS]: ⌘J 的空间范围：把 Space 成员映射成既有 projectKeys 过滤，判断当前过滤是否等于该范围，并把空查询行按项目分块
+ * [OUTPUT]: 对外提供 spaceToPaletteProjectKeys、groupWorktreeItemsByProject、isSpaceScopeFilter、planSpaceSeed
+ * [POS]: ⌘J 的空间范围：把 Space 成员映射成既有 projectKeys 过滤，判断当前过滤是否等于该范围，决定何时（重新）播种，并把空查询行按项目分块
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { Space } from '../../../../shared/space-types'
@@ -57,4 +57,29 @@ export function isSpaceScopeFilter(
   }
   const filterKeySet = new Set(filter.projectKeys)
   return spaceKeys.every((key) => filterKeySet.has(key))
+}
+
+/**
+ * Why: a plain [visible, activeSpaceId] effect seeds once and gives up — if
+ * the filter model hasn't hydrated yet (no repos/projects loaded), the first
+ * ⌘J of a session opens unscoped and never retries. This makes "have we
+ * already seeded this open" and "is the model ready" explicit decisions the
+ * caller's effect can re-run on every filterModel change without re-seeding
+ * a user's cleared chip.
+ */
+export function planSpaceSeed(input: {
+  activeSpace: Pick<Space, 'id' | 'memberIds'> | null
+  model: Pick<PaletteFilterModel, 'projects'>
+  seededSpaceId: string | null
+}): { spaceId: string; projectKeys: string[] } | null {
+  const { activeSpace, model, seededSpaceId } = input
+  if (!activeSpace || seededSpaceId === activeSpace.id) {
+    return null
+  }
+  const projectKeys = spaceToPaletteProjectKeys(activeSpace, model).sort()
+  if (projectKeys.length === 0) {
+    // Model not hydrated yet (or the space has no live members) — try again later.
+    return null
+  }
+  return { spaceId: activeSpace.id, projectKeys }
 }

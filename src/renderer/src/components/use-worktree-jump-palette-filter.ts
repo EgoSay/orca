@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { buildSidebarHostOptions } from '@/components/sidebar/sidebar-host-options'
 import { getProjectGroupExecutionHostIdForRows } from '@/components/sidebar/worktree-list/listing/host-filtering'
 import { buildPaletteFilterModel } from '@/components/cmd-j/palette-filter-options'
@@ -7,7 +7,7 @@ import {
   isPaletteFilterActive,
   reconcilePaletteFilter
 } from '@/components/cmd-j/palette-filter'
-import { spaceToPaletteProjectKeys } from '@/components/cmd-j/palette-space-scope'
+import { planSpaceSeed, spaceToPaletteProjectKeys } from '@/components/cmd-j/palette-space-scope'
 import { getRepoHostIdentity } from '@/store/slices/repo-host-identity'
 import { getHostDisplayLabelOverrides } from '../../../shared/host-setting-overrides'
 import { getSettingsFocusedExecutionHostId } from '../../../shared/execution-host'
@@ -96,18 +96,28 @@ export function useWorktreeJumpPaletteFilter({
     setRawFilter((current) => reconcilePaletteFilter(current, filterModel))
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- local-state setter identity is stable across extraction.
   }, [filterModel])
-  const activeSpaceId = activeSpace?.id ?? null
-  // Why: seed on open (or on switching spaces while open) only — the user
-  // clearing the space chip mid-session must not be undone by a re-render.
+  // Why: a ref (not just [visible, activeSpaceId] deps) so a re-render after
+  // hydration — repos/projects loading in after the palette is already open —
+  // can still seed once; the ref is what actually remembers "already seeded
+  // this open," not the effect's dependency list.
+  const seededSpaceIdRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!visible || !activeSpace) {
+    if (!visible) {
+      seededSpaceIdRef.current = null
       return
     }
-    const projectKeys = spaceToPaletteProjectKeys(activeSpace, filterModel).sort()
+    const seed = planSpaceSeed({
+      activeSpace,
+      model: filterModel,
+      seededSpaceId: seededSpaceIdRef.current
+    })
+    if (!seed) {
+      return
+    }
+    seededSpaceIdRef.current = seed.spaceId
     // Why: host chips are the user's; only the project field is space-owned.
-    setRawFilter((current) => ({ ...current, projectKeys }))
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- open-time seed; filterModel/activeSpace are read, not watched.
-  }, [visible, activeSpaceId])
+    setRawFilter((current) => ({ ...current, projectKeys: seed.projectKeys }))
+  }, [visible, activeSpace, filterModel, setRawFilter])
   const spaceScope = useMemo(
     () =>
       activeSpace

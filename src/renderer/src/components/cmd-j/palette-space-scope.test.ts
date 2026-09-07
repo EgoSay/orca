@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   groupWorktreeItemsByProject,
   isSpaceScopeFilter,
+  planSpaceSeed,
   spaceToPaletteProjectKeys
 } from './palette-space-scope'
 
@@ -50,5 +51,31 @@ describe('isSpaceScopeFilter', () => {
   it('is false when the sets differ', () => {
     expect(isSpaceScopeFilter({ projectKeys: ['a', 'c'] }, ['a', 'b'])).toBe(false)
     expect(isSpaceScopeFilter({ projectKeys: ['a'] }, ['a', 'b'])).toBe(false)
+  })
+})
+
+describe('planSpaceSeed', () => {
+  const model = { projects: [{ id: 'project:p1' }, { id: 'project:p2' }] } as never
+  const space = { id: 's1', memberIds: ['project:p1'] } as never
+
+  it('returns null when there is no active space', () => {
+    expect(planSpaceSeed({ activeSpace: null, model, seededSpaceId: null })).toBeNull()
+  })
+
+  it('returns null when already seeded for this space id', () => {
+    expect(planSpaceSeed({ activeSpace: space, model, seededSpaceId: 's1' })).toBeNull()
+  })
+
+  it('returns null when the expansion is empty (model not hydrated yet)', () => {
+    expect(
+      planSpaceSeed({ activeSpace: space, model: { projects: [] }, seededSpaceId: null })
+    ).toBeNull()
+  })
+
+  it('returns the sorted seed for a fresh space', () => {
+    expect(planSpaceSeed({ activeSpace: space, model, seededSpaceId: null })).toEqual({
+      spaceId: 's1',
+      projectKeys: ['project:p1']
+    })
   })
 })
