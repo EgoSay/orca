@@ -20,7 +20,7 @@ worktree-card-model.ts（改动）: WorktreeCardProps 新增 isGuestInActiveSpac
 SidebarToolbar.tsx（改动）: 挂载 SpaceSwitcher，透传 onManageSpaceMembers/onCreateSpace/spaceSwitcherOpen/onSpaceSwitcherOpenChange/highlightSpaceId。
 SidebarToolbar.test.tsx（改动）: 配套 SpaceSwitcher 挂载用例。
 Sidebar.test.tsx（改动）: 配套空间相关的渲染用例。
-index.tsx（改动）: 挂载 useSpaceDialogs/useSpaceKeybindings/useSidebarSpaceSwipe；用 hoverSpaceTargetId OR 手动开关驱动 SpaceSwitcher 受控 open，实现拖拽悬停时强制展开高亮。
+index.tsx（改动）: 挂载 useSpaceDialogs/useSpaceKeybindings/useSidebarSpaceSwipe；用 hoverSpaceTargetId OR 手动开关驱动 SpaceSwitcher 受控 open，实现拖拽悬停时强制展开高亮；openPicker 先 setSidebarOpen(true) 再置手动开关，侧边栏关闭时复位该开关。
 add-repo-store-upsert.ts（改动）: 新增仓库时若存在 activeSpaceId，同步 addSpaceMember——就近原则，新项目默认归入当前空间。
 rendered-sidebar-worktree-order.ts（改动）: computeRenderedSidebarWorktrees 新增 selectActiveSpaceRepoIds(state) 与 state.repos 入参。
 

@@ -105,6 +105,88 @@ describe('useVisibleSidebarWorktrees', () => {
       getWorktreeHostIdentity(ssh)
     ])
   })
+  // Why spec §5: the guest row exists so a Space cannot hide the workspace you
+  // are standing in. Legacy filters must keep their pre-Space semantics.
+  it('keeps the active workspace hidden under a repo filter with no space', () => {
+    const repo = makeRepo()
+    const other = { ...makeRepo(), id: 'repo-2', displayName: 'Repo 2' }
+    const active = makeWorktree('active', 'Active workspace', { repoId: other.id })
+    const listed = makeWorktree('listed', 'Listed workspace', { repoId: repo.id })
+    useAppStore.setState({
+      worktreesByRepo: { [repo.id]: [listed], [other.id]: [active] },
+      activeWorktreeId: active.id
+    })
+
+    const { result } = renderHook(() =>
+      useVisibleSidebarWorktrees({
+        filterState: {
+          showSleepingWorkspaces: true,
+          filterRepoIds: [repo.id],
+          hideDefaultBranchWorkspace: false,
+          hideAutomationGeneratedWorkspaces: false,
+          hideCliCreatedWorkspaces: false,
+          hideDetachedHeadWorkspaces: false,
+          hideWorkspacesFromOtherDevices: false,
+          alwaysShowDefaultBranchWorkspace: true,
+          visibleWorkspaceHostIds: null,
+          workspaceHostScope: 'all',
+          activeSpaceRepoIds: undefined
+        },
+        sortBy: 'recent',
+        sortedIds: [listed.id, active.id],
+        repoMap: new Map([
+          [repo.id, repo],
+          [other.id, other]
+        ]),
+        worktreeLineageById: {},
+        defaultHostId: LOCAL_EXECUTION_HOST_ID,
+        agentSendTargetWorktreeId: null
+      })
+    )
+
+    expect(result.current.visibleWorktrees.map((w) => w.id)).toEqual([listed.id])
+  })
+
+  it('forces the active workspace visible as a guest row under a space', () => {
+    const repo = makeRepo()
+    const other = { ...makeRepo(), id: 'repo-2', displayName: 'Repo 2' }
+    const active = makeWorktree('active', 'Active workspace', { repoId: other.id })
+    const listed = makeWorktree('listed', 'Listed workspace', { repoId: repo.id })
+    useAppStore.setState({
+      worktreesByRepo: { [repo.id]: [listed], [other.id]: [active] },
+      activeWorktreeId: active.id
+    })
+
+    const { result } = renderHook(() =>
+      useVisibleSidebarWorktrees({
+        filterState: {
+          showSleepingWorkspaces: true,
+          filterRepoIds: [],
+          hideDefaultBranchWorkspace: false,
+          hideAutomationGeneratedWorkspaces: false,
+          hideCliCreatedWorkspaces: false,
+          hideDetachedHeadWorkspaces: false,
+          hideWorkspacesFromOtherDevices: false,
+          alwaysShowDefaultBranchWorkspace: true,
+          visibleWorkspaceHostIds: null,
+          workspaceHostScope: 'all',
+          activeSpaceRepoIds: new Set([repo.id])
+        },
+        sortBy: 'recent',
+        sortedIds: [listed.id, active.id],
+        repoMap: new Map([
+          [repo.id, repo],
+          [other.id, other]
+        ]),
+        worktreeLineageById: {},
+        defaultHostId: LOCAL_EXECUTION_HOST_ID,
+        agentSendTargetWorktreeId: null
+      })
+    )
+
+    expect(result.current.visibleWorktrees.map((w) => w.id)).toEqual([listed.id, active.id])
+  })
+
   it('does not rescan every worktree when a settings write leaves the focused host unchanged', () => {
     const repo = makeRepo()
     const worktree = makeWorktree('alpha', 'Alpha workspace', { hostId: 'local' })

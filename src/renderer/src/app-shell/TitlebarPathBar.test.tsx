@@ -126,4 +126,20 @@ describe('TitlebarPathBar', () => {
     expect(container.textContent).not.toContain('Work')
     expect(container.textContent).toContain('Repo')
   })
+
+  // Why STA-4343: `repoId::path` ids repeat across execution hosts, so a bare id
+  // can resolve to the wrong host's workspace.
+  it('host-qualifies the worktree crumb selection', async () => {
+    const container = await render()
+    const target = [...container.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('wt-2')
+    )
+    expect(target).toBeDefined()
+
+    await act(async () => {
+      target?.click()
+    })
+
+    expect(mocks.setActiveWorktree).toHaveBeenCalledWith('wt-2', 'ssh:box')
+  })
 })

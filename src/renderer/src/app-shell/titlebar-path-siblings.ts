@@ -1,19 +1,29 @@
 /**
  * [INPUT]: 依赖 store/spaces/space-catalog 的 selectActiveSpace/selectActiveSpaceRepoIds，AppState 的 repos/worktreesByRepo/activeWorktreeId，i18n/i18n 的 translate
- * [OUTPUT]: 对外提供 buildTitlebarPath、TitlebarCrumb 类型、ALL_SPACE_CRUMB_ID
+ * [OUTPUT]: 对外提供 buildTitlebarPath、TitlebarCrumb/TitlebarCrumbSibling 类型、ALL_SPACE_CRUMB_ID
  * [POS]: 路径栏三段的兄弟列表派生（纯函数）；TitlebarPathBar 只负责渲染
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { AppState } from '@/store/types'
+import type { Worktree } from '../../../shared/worktree/types'
 import { selectActiveSpace, selectActiveSpaceRepoIds } from '@/store/spaces/space-catalog'
 import { translate } from '@/i18n/i18n'
 
 export const ALL_SPACE_CRUMB_ID = 'all'
 
+export type TitlebarCrumbSibling = {
+  id: string
+  label: string
+  detail: string
+  current: boolean
+  /** Only the worktree segment carries one: `repoId::path` ids repeat across hosts (STA-4343). */
+  hostId?: Worktree['hostId']
+}
+
 export type TitlebarCrumb = {
   label: string
   color: string | null
-  siblings: { id: string; label: string; detail: string; current: boolean }[]
+  siblings: TitlebarCrumbSibling[]
 }
 
 type PathState = Pick<
@@ -84,7 +94,8 @@ export function buildTitlebarPath(
         id: w.id,
         label: w.displayName,
         detail: w.branch,
-        current: w.id === active.id
+        current: w.id === active.id,
+        hostId: w.hostId
       }))
   }
   return { space, project, worktree }

@@ -104,9 +104,14 @@ export function useVisibleSidebarWorktrees(args: {
       defaultHostId,
       worktreeLineageById,
       activeSpaceRepoIds,
-      forcedVisibleWorktreeIds: [args.agentSendTargetWorktreeId, activeWorktreeId].filter(
-        (id): id is string => typeof id === 'string'
-      )
+      // Why spec §5: the guest row is a Space escape valve, so the active
+      // workspace is only forced visible under a space. Legacy filters (repo,
+      // host, sleeping, default-branch) keep their pre-Space semantics, and the
+      // Guest badge only renders under a space anyway.
+      forcedVisibleWorktreeIds: [
+        args.agentSendTargetWorktreeId,
+        activeSpaceRepoIds === undefined ? null : activeWorktreeId
+      ].filter((id): id is string => typeof id === 'string')
     })
   }, [
     args.agentSendTargetWorktreeId,

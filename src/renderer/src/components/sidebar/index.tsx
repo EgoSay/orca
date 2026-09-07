@@ -52,6 +52,7 @@ function Sidebar({
   worktreeScrollAnchorRef
 }: SidebarProps): React.JSX.Element {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
+  const setSidebarOpen = useAppStore((s) => s.setSidebarOpen)
   const sidebarWidth = useAppStore((s) => s.sidebarWidth)
   const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
   const repos = useAppStore((s) => s.repos)
@@ -118,7 +119,20 @@ function Sidebar({
   const [hoverSpaceTargetId, setHoverSpaceTargetId] = React.useState<string | '' | null>(null)
   const [spaceSwitcherManualOpen, setSpaceSwitcherManualOpen] = React.useState(false)
   const spaceSwitcherOpen = spaceSwitcherManualOpen || hoverSpaceTargetId !== null
-  useSpaceKeybindings({ openPicker: () => setSpaceSwitcherManualOpen(true) })
+  // Why: the switcher lives in the sidebar footer, so the picker shortcut has to
+  // reveal the sidebar first — otherwise the flag arms nothing and the menu pops
+  // open unbidden the next time the sidebar is shown.
+  useSpaceKeybindings({
+    openPicker: () => {
+      setSidebarOpen(true)
+      setSpaceSwitcherManualOpen(true)
+    }
+  })
+  useEffect(() => {
+    if (!sidebarOpen) {
+      setSpaceSwitcherManualOpen(false)
+    }
+  }, [sidebarOpen])
 
   const setLiveSidebarWidth = React.useCallback((width: number) => {
     document.documentElement.style.setProperty('--workspace-sidebar-live-width', `${width}px`)

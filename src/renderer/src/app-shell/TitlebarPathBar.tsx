@@ -15,7 +15,12 @@ import {
 import { useAppStore } from '@/store'
 import { pickSpaceLandingWorktree } from '@/store/spaces/space-landing'
 import { SpaceDot } from '../components/sidebar/spaces/SpaceSwitcher'
-import { ALL_SPACE_CRUMB_ID, buildTitlebarPath, type TitlebarCrumb } from './titlebar-path-siblings'
+import {
+  ALL_SPACE_CRUMB_ID,
+  buildTitlebarPath,
+  type TitlebarCrumb,
+  type TitlebarCrumbSibling
+} from './titlebar-path-siblings'
 
 function Crumb({
   crumb,
@@ -25,7 +30,7 @@ function Crumb({
   crumb: TitlebarCrumb
   /** Only the space segment carries a colored identity dot, matching SpaceSwitcher. */
   dot?: boolean
-  onPick: (id: string) => void
+  onPick: (sibling: TitlebarCrumbSibling) => void
 }): React.JSX.Element {
   return (
     <DropdownMenu modal={false}>
@@ -43,7 +48,7 @@ function Crumb({
         {crumb.siblings.map((s) => (
           <DropdownMenuItem
             key={s.id}
-            onSelect={() => onPick(s.id)}
+            onSelect={() => onPick(s)}
             className={s.current ? 'bg-accent' : undefined}
           >
             <span className="truncate">{s.label}</span>
@@ -109,14 +114,15 @@ export function TitlebarPathBar(): React.JSX.Element | null {
           <Crumb
             crumb={path.space}
             dot
-            onPick={(id) => activateSpace(id === ALL_SPACE_CRUMB_ID ? null : id)}
+            onPick={(s) => activateSpace(s.id === ALL_SPACE_CRUMB_ID ? null : s.id)}
           />
           <span className="px-0.5 text-[11px] text-muted-foreground">›</span>
         </>
       ) : null}
-      <Crumb crumb={path.project} onPick={pickProject} />
+      <Crumb crumb={path.project} onPick={(s) => pickProject(s.id)} />
       <span className="px-0.5 text-[11px] text-muted-foreground">›</span>
-      <Crumb crumb={path.worktree} onPick={(id) => setActiveWorktree(id)} />
+      {/* Why STA-4343: pass the host — a bare id can resolve to another host's workspace. */}
+      <Crumb crumb={path.worktree} onPick={(s) => setActiveWorktree(s.id, s.hostId)} />
     </div>
   )
 }
