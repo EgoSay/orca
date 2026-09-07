@@ -100,6 +100,12 @@ vi.mock('./useWorkspaceBoardPanel', () => ({
   })
 }))
 
+// Why: the real hook mounts SpaceCreateSheet/SpaceMemberSheet, which read
+// store.spaces — absent from this file's hand-written mocks.state.
+vi.mock('./spaces/use-space-dialogs', () => ({
+  useSpaceDialogs: () => ({ openCreate: vi.fn(), openMembers: vi.fn(), dialogs: null })
+}))
+
 import Sidebar from './index'
 
 function setSidebarState(settings: GlobalSettings, statusBarVisible = true): void {
