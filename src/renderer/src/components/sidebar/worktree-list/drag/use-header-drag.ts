@@ -194,6 +194,7 @@ export function useWorktreeSidebarHeaderDrag(args: {
   useEffect(() => {
     onSpaceDropHoverChange?.(repoDrag.state.hoverSpaceTargetId)
   }, [onSpaceDropHoverChange, repoDrag.state.hoverSpaceTargetId])
+  useEffect(() => () => onSpaceDropHoverChange?.(null), [onSpaceDropHoverChange])
   const projectGroupDrag = useProjectGroupHeaderDrag({
     sidebarProjectGroupHeaderIdsByBucket,
     projectGroupById: projectGroupByIdForHeaderDrag,

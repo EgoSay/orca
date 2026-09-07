@@ -13,6 +13,7 @@ import {
   type ProjectHeaderDragSession,
   type RepoDragState,
   type RepoHeaderDragController,
+  type SpaceDropTargetId,
   type UseRepoHeaderDragArgs
 } from './project-header-drag-contract'
 import { createProjectHeaderDragSession } from './project-header-drag-start'
@@ -91,11 +92,15 @@ export function useRepoHeaderDrag({
   )
 
   const applyDrop = useCallback(
-    (repoId: string, drop: { dropIndex: number; dropIndicatorY: number } | null) => {
+    (
+      repoId: string,
+      drop: { dropIndex: number; dropIndicatorY: number } | null,
+      hoverSpaceTargetId: SpaceDropTargetId = null
+    ) => {
       latestDropIndexRef.current = drop?.dropIndex ?? null
       const nextState: RepoDragState = drop
-        ? { draggingRepoId: repoId, hoverSpaceTargetId: null, ...drop }
-        : idleRepoDragState(repoId, null)
+        ? { draggingRepoId: repoId, hoverSpaceTargetId, ...drop }
+        : idleRepoDragState(repoId, hoverSpaceTargetId)
       setState((prev) =>
         prev.draggingRepoId === nextState.draggingRepoId &&
         prev.dropIndex === nextState.dropIndex &&
@@ -197,8 +202,10 @@ export function useRepoHeaderDrag({
       refreshHeaderRects()
       session.externalTargetId = findSpaceDropTarget(document, e.clientX, e.clientY)
       if (session.externalTargetId !== null) {
-        // Why: over the toolbar the reorder indicator and autoscroll both go quiet — geometric intent.
-        setState(idleRepoDragState(session.repoId, session.externalTargetId))
+        // Why: over the toolbar the reorder indicator and autoscroll both go quiet — geometric
+        // intent. Routed through applyDrop so its equality gate skips the setState when the
+        // hovered target hasn't changed since the last pointermove (a stationary hover is common).
+        applyDrop(session.repoId, null, session.externalTargetId)
         cancelAutoscroll()
         return
       }
