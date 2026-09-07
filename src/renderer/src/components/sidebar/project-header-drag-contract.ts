@@ -64,7 +64,6 @@ export type EndDragOutcome =
   | { kind: 'reorder'; sidebarDropIndex: number }
   | { kind: 'none' }
 
-// Why: '' (the trigger) is falsy, so it resolves like no target — only a real space id lands.
 export function resolveEndDragOutcome(
   session: ProjectHeaderDragSession,
   commit: boolean,
@@ -73,8 +72,12 @@ export function resolveEndDragOutcome(
   if (!commit || !session.promoted) {
     return { kind: 'none' }
   }
-  if (session.externalTargetId) {
-    return { kind: 'space', spaceId: session.externalTargetId }
+  // Why: any external target (including '', the trigger) preempts reorder — only a real space
+  // id lands; '' is a no-op rather than falling through to a stale latestDropIndex.
+  if (session.externalTargetId !== null) {
+    return session.externalTargetId
+      ? { kind: 'space', spaceId: session.externalTargetId }
+      : { kind: 'none' }
   }
   if (latestDropIndex !== null) {
     return { kind: 'reorder', sidebarDropIndex: latestDropIndex }
