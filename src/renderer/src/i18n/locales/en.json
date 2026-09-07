@@ -16906,6 +16906,13 @@
           "deleteTable": "Delete table"
         }
       }
+    },
+    "app": {
+      "shell": {
+        "TitlebarPathBar": {
+          "all": "All"
+        }
+      }
     }
   },
   "components": {

@@ -6,6 +6,7 @@ import { ActivityTitlebarControls } from '../components/activity/ActivityTitleba
 import { useShortcutLabel } from '../hooks/useShortcutLabel'
 import { useAppStore } from '../store'
 import { hasCustomTitleBar } from './app-window-chrome'
+import { TitlebarPathBar } from './TitlebarPathBar'
 import type { AppChromeLayout } from './use-app-chrome-layout'
 
 export function RightSidebarToggle(): React.JSX.Element {
@@ -46,6 +47,7 @@ export function TitlebarMainStrip({ layout }: { layout: AppChromeLayout }): Reac
 
   return (
     <>
+      {layout.workspaceChromeActive ? <TitlebarPathBar /> : null}
       {layout.activeView === 'activity' ? (
         <ActivityTitlebarControls />
       ) : layout.creationLayoutActive ? null : (

@@ -14654,6 +14654,13 @@
           "deleteTable": "删除表格"
         }
       }
+    },
+    "app": {
+      "shell": {
+        "TitlebarPathBar": {
+          "all": "全部"
+        }
+      }
     }
   },
   "components": {
