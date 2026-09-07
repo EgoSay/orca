@@ -43,6 +43,8 @@ const SidebarToolbar = React.memo(function SidebarToolbar({
   const [workspaceBoardMovedHintOpen, setWorkspaceBoardMovedHintOpen] = React.useState(false)
   const movedHintEligibleRef = React.useRef<boolean | null>(null)
   const persistedUIReady = useAppStore((state) => state.persistedUIReady)
+  // Why: the web client's fallback spaces API resolves undefined, so this never flips there.
+  const spacesHydrated = useAppStore((state) => state.spacesHydrated)
   const hasUsedWorkspaceBoard = useAppStore((state) =>
     hasFeatureInteraction(state.featureInteractions, 'workspace-board')
   )
@@ -85,13 +87,15 @@ const SidebarToolbar = React.memo(function SidebarToolbar({
       <div className="flex items-center justify-between border-t border-worktree-sidebar-border px-2 py-1.5">
         <div className="flex min-w-0 items-center gap-1">
           <SidebarSettingsHelpMenu />
-          <SpaceSwitcher
-            onManageMembers={onManageSpaceMembers}
-            onCreateSpace={onCreateSpace}
-            open={spaceSwitcherOpen}
-            onOpenChange={onSpaceSwitcherOpenChange}
-            highlightSpaceId={highlightSpaceId}
-          />
+          {spacesHydrated ? (
+            <SpaceSwitcher
+              onManageMembers={onManageSpaceMembers}
+              onCreateSpace={onCreateSpace}
+              open={spaceSwitcherOpen}
+              onOpenChange={onSpaceSwitcherOpenChange}
+              highlightSpaceId={highlightSpaceId}
+            />
+          ) : null}
         </div>
         <div className="flex items-center gap-1">
           <ScrollToCurrentWorkspaceToolbarButton />

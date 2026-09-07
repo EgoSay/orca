@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   activeTooltipOpen: false,
   state: {
     persistedUIReady: true,
+    spacesHydrated: true,
     featureInteractions: {}
   } as Partial<AppState>
 }))
@@ -162,5 +163,27 @@ describe('SidebarToolbar moved workspace board hint', () => {
 
     expect(container.textContent).not.toContain('Profile')
     expect(container.textContent).toContain('Settings')
+  })
+})
+
+describe('SidebarToolbar space switcher gate', () => {
+  beforeEach(() => {
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    mocks.state = { persistedUIReady: true, spacesHydrated: true, featureInteractions: {} }
+  })
+
+  it('mounts the switcher once the spaces API has hydrated', async () => {
+    const { container } = await renderToolbar()
+
+    expect(container.textContent).toContain('Space switcher')
+  })
+
+  // Why: on the web client every spaces method resolves undefined, so the
+  // switcher would render a menu backed by nothing.
+  it('leaves the switcher unmounted while spaces never hydrated', async () => {
+    mocks.state = { persistedUIReady: true, spacesHydrated: false, featureInteractions: {} }
+    const { container } = await renderToolbar()
+
+    expect(container.textContent).not.toContain('Space switcher')
   })
 })

@@ -56,6 +56,10 @@ export function useSpaceKeybindings({ openPicker }: { openPicker: () => void }):
 
       const platform = getShortcutPlatform()
       const state = useAppStore.getState()
+      // Why: no Space chrome is mounted on a client whose spaces API never hydrated (web).
+      if (!state.spacesHydrated) {
+        return
+      }
       const options: KeybindingMatchOptions = {
         context: getSpaceKeybindingContext(e.target),
         terminalShortcutPolicy: state.settings?.terminalShortcutPolicy

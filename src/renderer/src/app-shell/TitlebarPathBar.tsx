@@ -63,6 +63,8 @@ export function TitlebarPathBar(): React.JSX.Element | null {
   // and useMemo below only recomputes the derived path when one of them changes.
   const spaces = useAppStore((s) => s.spaces)
   const activeSpaceId = useAppStore((s) => s.activeSpaceId)
+  // Why: the web client's fallback spaces API never hydrates — no space crumb there.
+  const spacesHydrated = useAppStore((s) => s.spacesHydrated)
   const repos = useAppStore((s) => s.repos)
   const projectHostSetups = useAppStore((s) => s.projectHostSetups)
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
@@ -102,12 +104,16 @@ export function TitlebarPathBar(): React.JSX.Element | null {
       // Why: the titlebar is an OS drag region; without no-drag these buttons never receive clicks.
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >
-      <Crumb
-        crumb={path.space}
-        dot
-        onPick={(id) => activateSpace(id === ALL_SPACE_CRUMB_ID ? null : id)}
-      />
-      <span className="px-0.5 text-[11px] text-muted-foreground">›</span>
+      {spacesHydrated ? (
+        <>
+          <Crumb
+            crumb={path.space}
+            dot
+            onPick={(id) => activateSpace(id === ALL_SPACE_CRUMB_ID ? null : id)}
+          />
+          <span className="px-0.5 text-[11px] text-muted-foreground">›</span>
+        </>
+      ) : null}
       <Crumb crumb={path.project} onPick={pickProject} />
       <span className="px-0.5 text-[11px] text-muted-foreground">›</span>
       <Crumb crumb={path.worktree} onPick={(id) => setActiveWorktree(id)} />

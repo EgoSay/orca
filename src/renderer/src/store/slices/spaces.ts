@@ -36,9 +36,15 @@ export const createSpacesSlice: StateCreator<AppState, [], [], SpacesSlice> = (s
   activeSpaceId: null,
   spacesHydrated: false,
 
+  // Why every action checks its result: on the web client `window.api.spaces` is
+  // the withFallback proxy, so each method resolves undefined rather than throwing.
+  // spacesHydrated is the single gate the Space chrome reads to stay unmounted there.
   loadSpaces: async () => {
     try {
       const spaces = await window.api.spaces.list()
+      if (!Array.isArray(spaces)) {
+        return
+      }
       set({ spaces, spacesHydrated: true })
     } catch (err) {
       console.error('Failed to load spaces:', err)
@@ -48,6 +54,9 @@ export const createSpacesSlice: StateCreator<AppState, [], [], SpacesSlice> = (s
   createSpace: async (input) => {
     try {
       const space = await window.api.spaces.create(input)
+      if (!space) {
+        return null
+      }
       set((s) => ({ spaces: [...s.spaces, space] }))
       return space
     } catch (err) {
@@ -115,6 +124,9 @@ export const createSpacesSlice: StateCreator<AppState, [], [], SpacesSlice> = (s
   reorderSpaces: async (orderedIds) => {
     try {
       const spaces = await window.api.spaces.reorder({ orderedIds })
+      if (!Array.isArray(spaces)) {
+        return
+      }
       set({ spaces })
     } catch (err) {
       console.error('Failed to reorder spaces:', err)

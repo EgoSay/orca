@@ -24,6 +24,7 @@ function dispatchControlTap(target: EventTarget): void {
 }
 
 it('opens the picker on a Control double-tap, even through a descendant bubble-phase stopPropagation()', () => {
+  useAppStore.setState({ spacesHydrated: true })
   const openPicker = vi.fn()
   const button = document.createElement('button')
   // Why: mirrors HostSectionHeaderMenu.tsx's onKeyDown={(e) => e.stopPropagation()} —
@@ -66,6 +67,7 @@ it('does not switch spaces from a terminal target under the terminal-first polic
   useAppStore.setState({
     settings: { terminalShortcutPolicy: 'terminal-first' } as never,
     spaces: [{ id: 'space-1' }] as never,
+    spacesHydrated: true,
     activateSpace
   })
   const openPicker = vi.fn()
@@ -95,6 +97,18 @@ it('removes its listeners on unmount', () => {
   const openPicker = vi.fn()
   const { unmount } = renderHook(() => useSpaceKeybindings({ openPicker }))
   unmount()
+
+  act(() => {
+    dispatchControlTap(window)
+    dispatchControlTap(window)
+  })
+
+  expect(openPicker).not.toHaveBeenCalled()
+})
+
+it('stays silent on a client whose spaces API never hydrated (web fallback)', () => {
+  const openPicker = vi.fn()
+  renderHook(() => useSpaceKeybindings({ openPicker }))
 
   act(() => {
     dispatchControlTap(window)
