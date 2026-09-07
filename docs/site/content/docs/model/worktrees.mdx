@@ -88,6 +88,16 @@ When you create from a **Linear issue**, Orca uses Linear's own branch name for 
 
 The Branch name field is only offered when you're creating from a typed workspace name or a base branch. When the workspace is tied to a tracked work item, the branch is derived from that item — a linked GitHub PR even re-resolves the branch at submit — so Orca hides the field to avoid a silently-ignored override.
 
+## Spaces
+
+A **space** is a named view over your projects — writing, work, a client. Spaces sit above projects: a project can belong to several spaces, and a space only references projects, it never moves or owns them.
+
+- Switch spaces from the bottom-left of the sidebar, the titlebar path bar (`Space › Project › Worktree`), a two-finger horizontal swipe on the sidebar, double-tap `Ctrl`, or `Cmd-Option-1…9` on macOS.
+- Switching moves you to the worktree you last visited in that space; the tab strip follows the worktree, as always.
+- Drag a project header onto the space control to add it; right-click a project to remove it from the current space; **Manage projects…** edits the whole set.
+- `Cmd-J` opens scoped to the current space (clear the chip to search everything).
+- **All** is always available and shows every project.
+
 ## Sidebar layout
 
 The sidebar groups worktrees by **project** by default — top-level rows are projects (one project = one git repo or a related cluster), expanded into the worktrees you're actively working on. The header has its own filter input (separate from the global search) so you can narrow the list without leaving the sidebar.

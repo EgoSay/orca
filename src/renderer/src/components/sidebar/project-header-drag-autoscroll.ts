@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 ./worktree-sidebar-drag-autoscroll 的 getWorktreeSidebarDragAutoscroll，./project-header-drag-contract 的 ProjectHeaderDragSession 类型，react 的 useCallback/useRef
+ * [OUTPUT]: 对外提供 useRepoHeaderDragAutoscroll
+ * [POS]: project-header-drag 的 RAF 自动滚动循环；从 project-header-drag.ts 拆出的自包含关注点
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
 import { useCallback, useRef } from 'react'
 import type { MutableRefObject } from 'react'
 

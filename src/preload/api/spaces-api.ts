@@ -1,3 +1,9 @@
+/**
+ * [INPUT]: 依赖 shared/space-types 的 Space/SpaceMemberId/SpaceUpdate 类型（仅类型，无运行时依赖）
+ * [OUTPUT]: 对外提供 SpacesApi 类型
+ * [POS]: preload 暴露给 renderer 的 Space IPC 签名；由 spaces-bridge.ts 实现，PreloadApi['spaces'] 消费
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
 import type { Space, SpaceMemberId, SpaceUpdate } from '../../shared/space-types'
 
 export type SpacesApi = {
