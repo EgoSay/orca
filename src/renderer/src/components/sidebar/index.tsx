@@ -16,6 +16,7 @@ import { useSidebarProjectDrop } from './useSidebarProjectDrop'
 import { useWorkspaceBoardPanel } from './useWorkspaceBoardPanel'
 import { useWorkspaceRevealBodyRedirect } from './use-workspace-reveal-body-redirect'
 import { useSpaceDialogs } from './spaces/use-space-dialogs'
+import { useSpaceKeybindings } from './spaces/use-space-keybindings'
 import { resolveLeftSidebarStyleVariables } from '@/lib/left-sidebar-appearance'
 import { useSystemPrefersDark } from '@/components/terminal-pane/use-system-prefers-dark'
 import { lazyWithRetry } from '@/lib/lazy-with-retry'
@@ -116,6 +117,7 @@ function Sidebar({
   const [hoverSpaceTargetId, setHoverSpaceTargetId] = React.useState<string | '' | null>(null)
   const [spaceSwitcherManualOpen, setSpaceSwitcherManualOpen] = React.useState(false)
   const spaceSwitcherOpen = spaceSwitcherManualOpen || hoverSpaceTargetId !== null
+  useSpaceKeybindings({ openPicker: () => setSpaceSwitcherManualOpen(true) })
 
   const setLiveSidebarWidth = React.useCallback((width: number) => {
     document.documentElement.style.setProperty('--workspace-sidebar-live-width', `${width}px`)

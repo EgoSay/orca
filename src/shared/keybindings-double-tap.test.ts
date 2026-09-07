@@ -165,14 +165,11 @@ describe('keybindings', () => {
   })
 
   it('does not report a conflict when one action lists double-tap aliases for itself', () => {
+    // Why: darwin only — DoubleTap+Ctrl is now a real default (space.picker) on linux/win32,
+    // so Mod/Ctrl there is no longer a safe self-alias pair to exercise this in isolation.
     expect(
       findKeybindingConflicts('darwin', {
         'worktree.quickOpen': ['DoubleTap+Mod', 'DoubleTap+Cmd']
-      })
-    ).toEqual([])
-    expect(
-      findKeybindingConflicts('linux', {
-        'worktree.quickOpen': ['DoubleTap+Mod', 'DoubleTap+Ctrl']
       })
     ).toEqual([])
   })

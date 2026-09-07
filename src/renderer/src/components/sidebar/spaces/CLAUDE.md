@@ -8,6 +8,7 @@ SpaceMemberList.tsx: 新建空间与管理成员共用的勾选列表；按 orde
 SpaceCreateSheet.tsx: 新建空间对话框——名称 + 图标 + 颜色 + 成员一步配完，建完立即 activateSpace；导出 SPACE_ICONS/SPACE_COLORS。
 SpaceMemberSheet.tsx: 管理某空间成员的对话框——勾选即调用 setSpaceMembers 写入，无本地草稿。
 use-space-dialogs.tsx: 收口 SpaceCreateSheet/SpaceMemberSheet 的开关状态，供 sidebar/index.tsx 挂载。
+use-space-keybindings.ts: 全局键位监听——双击 ⌃ 开 SpaceSwitcher（DoubleTap+Ctrl，经 ModifierDoubleTapDetector 复用检测器）、⌘⌥数字直切空间（matchKeybindingDigitIndex）；供 sidebar/index.tsx 挂载。
 space-drop-target.ts: 纯函数 findSpaceDropTarget(root, x, y) 按 data-space-drop-target 命中测试——'' 触发器/空间 id/null；被 project-header-drag 每次 pointermove 调用。
 space-drop-target.test.ts: findSpaceDropTarget 的命中测试用例（触发器/菜单项/空白处）。
 
