@@ -19,6 +19,9 @@ type SidebarToolbarProps = {
   onWorkspaceBoardToggle: () => void
   onManageSpaceMembers: (spaceId: string) => void
   onCreateSpace: () => void
+  spaceSwitcherOpen: boolean
+  onSpaceSwitcherOpenChange: (open: boolean) => void
+  highlightSpaceId: string | '' | null
 }
 
 const SidebarToolbar = React.memo(function SidebarToolbar({
@@ -26,7 +29,10 @@ const SidebarToolbar = React.memo(function SidebarToolbar({
   workspaceBoardDragPreviewOpen = false,
   onWorkspaceBoardToggle,
   onManageSpaceMembers,
-  onCreateSpace
+  onCreateSpace,
+  spaceSwitcherOpen,
+  onSpaceSwitcherOpenChange,
+  highlightSpaceId
 }: SidebarToolbarProps) {
   // Why: this memo boundary needs its own language subscription, while
   // translate() preserves Orca's pseudo-localization behavior. Without it the
@@ -79,7 +85,13 @@ const SidebarToolbar = React.memo(function SidebarToolbar({
       <div className="flex items-center justify-between border-t border-worktree-sidebar-border px-2 py-1.5">
         <div className="flex min-w-0 items-center gap-1">
           <SidebarSettingsHelpMenu />
-          <SpaceSwitcher onManageMembers={onManageSpaceMembers} onCreateSpace={onCreateSpace} />
+          <SpaceSwitcher
+            onManageMembers={onManageSpaceMembers}
+            onCreateSpace={onCreateSpace}
+            open={spaceSwitcherOpen}
+            onOpenChange={onSpaceSwitcherOpenChange}
+            highlightSpaceId={highlightSpaceId}
+          />
         </div>
         <div className="flex items-center gap-1">
           <ScrollToCurrentWorkspaceToolbarButton />

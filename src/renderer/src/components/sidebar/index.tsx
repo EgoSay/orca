@@ -110,6 +110,12 @@ function Sidebar({
     cancelWorkspaceBoardDragPreview
   } = useWorkspaceBoardPanel()
   const spaceDialogs = useSpaceDialogs()
+  // Why: dragging a project header over the space switcher must force it open and
+  // highlight the hovered target without adding a second controlled-open prop to
+  // SpaceSwitcher — the drag hover ORs into the switcher's single open/onOpenChange pair.
+  const [hoverSpaceTargetId, setHoverSpaceTargetId] = React.useState<string | '' | null>(null)
+  const [spaceSwitcherManualOpen, setSpaceSwitcherManualOpen] = React.useState(false)
+  const spaceSwitcherOpen = spaceSwitcherManualOpen || hoverSpaceTargetId !== null
 
   const setLiveSidebarWidth = React.useCallback((width: number) => {
     document.documentElement.style.setProperty('--workspace-sidebar-live-width', `${width}px`)
@@ -190,6 +196,7 @@ function Sidebar({
                 onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
                 onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
                 onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
+                onSpaceDropHoverChange={setHoverSpaceTargetId}
               />
             )}
 
@@ -203,6 +210,9 @@ function Sidebar({
                 onWorkspaceBoardToggle={toggleWorkspaceBoard}
                 onManageSpaceMembers={spaceDialogs.openMembers}
                 onCreateSpace={spaceDialogs.openCreate}
+                spaceSwitcherOpen={spaceSwitcherOpen}
+                onSpaceSwitcherOpenChange={setSpaceSwitcherManualOpen}
+                highlightSpaceId={hoverSpaceTargetId}
               />
             </div>
           </>

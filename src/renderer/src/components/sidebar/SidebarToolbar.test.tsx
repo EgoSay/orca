@@ -62,6 +62,9 @@ async function renderToolbar(onWorkspaceBoardToggle = vi.fn()): Promise<{
           onWorkspaceBoardToggle={onWorkspaceBoardToggle}
           onManageSpaceMembers={() => {}}
           onCreateSpace={() => {}}
+          spaceSwitcherOpen={false}
+          onSpaceSwitcherOpenChange={() => {}}
+          highlightSpaceId={null}
         />
       )
     })

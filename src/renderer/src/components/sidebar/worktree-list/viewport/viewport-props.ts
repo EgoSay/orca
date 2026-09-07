@@ -77,6 +77,7 @@ export type VirtualizedWorktreeViewportProps = {
   allRepoIds: string[]
   onReorderHostSections: (orderedHostIds: ExecutionHostId[]) => void
   onHostDragActiveChange: (active: boolean) => void
+  onSpaceDropHoverChange?: (id: string | '' | null) => void
   prCache: AppState['prCache'] | null
   hostedReviewCache: AppState['hostedReviewCache'] | null
   workspaceStatuses: readonly WorkspaceStatusDefinition[]

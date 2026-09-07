@@ -3,16 +3,21 @@ import type { PointerEvent } from 'react'
 import type { ProjectHeaderDragBucketKey, ProjectHeaderDragRect } from './project-header-drop'
 import type { Repo } from '../../../../shared/repo-types'
 
+/** '' = the space switcher trigger; a space id = a menu item; null = not over any target. */
+export type SpaceDropTargetId = string | '' | null
+
 export type RepoDragState = {
   draggingRepoId: string | null
   dropIndex: number | null
   dropIndicatorY: number | null
+  hoverSpaceTargetId: SpaceDropTargetId
 }
 
 export const INITIAL_REPO_DRAG_STATE: RepoDragState = {
   draggingRepoId: null,
   dropIndex: null,
-  dropIndicatorY: null
+  dropIndicatorY: null,
+  hoverSpaceTargetId: null
 }
 
 export type UseRepoHeaderDragArgs = {
@@ -23,6 +28,7 @@ export type UseRepoHeaderDragArgs = {
   onCommitRepoOrder: (orderedIds: string[]) => void
   onCommitProjectGroupOrder: (repoId: string, projectGroupId: string | null, order: number) => void
   getScrollContainer: () => HTMLElement | null
+  onDropOnSpace?: (repoId: string, spaceId: string) => void
 }
 
 export type RepoHeaderDragController = {
@@ -40,7 +46,40 @@ export type ProjectHeaderDragSession = {
   startX: number
   startY: number
   latestPointerY: number
+  latestPointerX: number
   promoted: boolean
+  externalTargetId: SpaceDropTargetId
+}
+
+/** A quiescent drag state: no sidebar reorder in progress, only the space hover (if any). */
+export function idleRepoDragState(
+  repoId: string,
+  hoverSpaceTargetId: SpaceDropTargetId
+): RepoDragState {
+  return { draggingRepoId: repoId, dropIndex: null, dropIndicatorY: null, hoverSpaceTargetId }
+}
+
+export type EndDragOutcome =
+  | { kind: 'space'; spaceId: string }
+  | { kind: 'reorder'; sidebarDropIndex: number }
+  | { kind: 'none' }
+
+// Why: '' (the trigger) is falsy, so it resolves like no target — only a real space id lands.
+export function resolveEndDragOutcome(
+  session: ProjectHeaderDragSession,
+  commit: boolean,
+  latestDropIndex: number | null
+): EndDragOutcome {
+  if (!commit || !session.promoted) {
+    return { kind: 'none' }
+  }
+  if (session.externalTargetId) {
+    return { kind: 'space', spaceId: session.externalTargetId }
+  }
+  if (latestDropIndex !== null) {
+    return { kind: 'reorder', sidebarDropIndex: latestDropIndex }
+  }
+  return { kind: 'none' }
 }
 
 export const PROJECT_HEADER_DRAG_THRESHOLD_PX = 4

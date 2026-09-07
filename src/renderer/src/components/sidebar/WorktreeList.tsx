@@ -45,6 +45,7 @@ type WorktreeListProps = {
   onWorkspaceBoardDragPreviewStart?: () => void
   onWorkspaceBoardDragPreviewCommit?: () => void
   onWorkspaceBoardDragPreviewCancel?: () => void
+  onSpaceDropHoverChange?: (id: string | '' | null) => void
 }
 
 const WorktreeList = React.memo(function WorktreeList({
@@ -53,7 +54,8 @@ const WorktreeList = React.memo(function WorktreeList({
   workspaceBoardOpen = false,
   onWorkspaceBoardDragPreviewStart = NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK,
   onWorkspaceBoardDragPreviewCommit = NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK,
-  onWorkspaceBoardDragPreviewCancel = NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK
+  onWorkspaceBoardDragPreviewCancel = NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK,
+  onSpaceDropHoverChange
 }: WorktreeListProps) {
   // ── Granular selectors (each is a primitive or shallow-stable ref) ──
   const allWorktrees = useAllWorktrees()
@@ -350,6 +352,7 @@ const WorktreeList = React.memo(function WorktreeList({
         onWorkspaceBoardDragPreviewStart={onWorkspaceBoardDragPreviewStart}
         onWorkspaceBoardDragPreviewCommit={onWorkspaceBoardDragPreviewCommit}
         onWorkspaceBoardDragPreviewCancel={onWorkspaceBoardDragPreviewCancel}
+        onSpaceDropHoverChange={onSpaceDropHoverChange}
         shouldShowWorkspaceBoardDropIndicator={
           statusMutations.shouldShowWorkspaceBoardDropIndicator
         }

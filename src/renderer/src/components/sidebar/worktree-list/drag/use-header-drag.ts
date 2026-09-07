@@ -16,6 +16,7 @@ import {
 import { useHostHeaderDrag } from '../../host-header-drag'
 import { useRepoHeaderDrag } from '../../project-header-drag'
 import { getSidebarOrderedRepoHeaderIdsByBucket } from '../../project-header-drop'
+import { selectSpaceMemberIdForRepo } from '@/store/spaces/space-catalog'
 import { useProjectGroupHeaderDrag } from '../../project-group-header-drag'
 import { getSidebarOrderedProjectGroupHeaderIdsByBucket } from '../../project-group-header-drop'
 import { USER_SCROLL_MEASUREMENT_ADJUSTMENT_SUPPRESS_MS } from '../viewport/use-scroll-suppression'
@@ -58,6 +59,7 @@ export function useWorktreeSidebarHeaderDrag(args: {
   onHostDragActiveChange: (active: boolean) => void
   suppressMeasurementAdjustmentUntilRef: React.MutableRefObject<number>
   directScrollInputUntilRef: React.MutableRefObject<number>
+  onSpaceDropHoverChange?: (id: string | '' | null) => void
 }) {
   const {
     rows,
@@ -72,7 +74,8 @@ export function useWorktreeSidebarHeaderDrag(args: {
     onReorderHostSections,
     onHostDragActiveChange,
     suppressMeasurementAdjustmentUntilRef,
-    directScrollInputUntilRef
+    directScrollInputUntilRef,
+    onSpaceDropHoverChange
   } = args
   const reorderRepos = useAppStore((s) => s.reorderRepos)
   const moveProjectToGroup = useAppStore((s) => s.moveProjectToGroup)
@@ -182,8 +185,15 @@ export function useWorktreeSidebarHeaderDrag(args: {
     usesProjectGroupOrdering: hasProjectGroups,
     onCommitRepoOrder: commitRepoReorder,
     onCommitProjectGroupOrder: commitProjectGroupOrder,
-    getScrollContainer: () => scrollRef.current
+    getScrollContainer: () => scrollRef.current,
+    onDropOnSpace: (repoId, spaceId) => {
+      const state = useAppStore.getState()
+      void state.addSpaceMember(spaceId, selectSpaceMemberIdForRepo(state, repoId))
+    }
   })
+  useEffect(() => {
+    onSpaceDropHoverChange?.(repoDrag.state.hoverSpaceTargetId)
+  }, [onSpaceDropHoverChange, repoDrag.state.hoverSpaceTargetId])
   const projectGroupDrag = useProjectGroupHeaderDrag({
     sidebarProjectGroupHeaderIdsByBucket,
     projectGroupById: projectGroupByIdForHeaderDrag,
