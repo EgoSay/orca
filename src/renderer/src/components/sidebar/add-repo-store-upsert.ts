@@ -7,6 +7,7 @@ import {
 import type { Repo } from '../../../../shared/repo-types'
 import { useAppStore } from '@/store'
 import { getRepoHostIdentity } from '@/store/slices/repo-host-identity'
+import { selectSpaceMemberIdForRepo } from '@/store/spaces/space-catalog'
 
 type AddedRepoOwner = {
   runtimeEnvironmentId?: string | null
@@ -50,5 +51,12 @@ export function upsertAddedRepoWithProjectHostSetup(
     projects: projection.projects,
     projectHostSetups: projection.setups
   })
+  // Why: a project added while a space is active belongs there — least surprise.
+  if (!alreadyPresent && state.activeSpaceId) {
+    void state.addSpaceMember(
+      state.activeSpaceId,
+      selectSpaceMemberIdForRepo({ projectHostSetups: projection.setups }, ownedRepo.id)
+    )
+  }
   return { alreadyPresent, repo: ownedRepo }
 }

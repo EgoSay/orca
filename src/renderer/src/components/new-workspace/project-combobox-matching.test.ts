@@ -68,6 +68,49 @@ describe('sectionProjectOptions', () => {
   })
 })
 
+describe('sectionProjectOptions with a space scope', () => {
+  it('puts member projects first under the space name and the rest under Other projects', () => {
+    const matches = rankProjectOptions([orca, relay], '', [])
+    const sections = sectionProjectOptions(matches, '', [], {
+      name: '开发',
+      projectIds: new Set(['orca'])
+    })
+    expect(sections.map((s) => s.key)).toEqual(['space', 'projects'])
+    expect(sections[0]?.heading).toBe('开发')
+    expect(sections[0]?.items.map((m) => m.option.id)).toEqual(['orca'])
+    expect(sections[1]?.heading).toBe('Other projects')
+    expect(sections[1]?.items.map((m) => m.option.id)).toEqual(['relay'])
+  })
+
+  it('still collapses to a single unlabelled list while a query is live', () => {
+    const matches = rankProjectOptions([orca, relay], 'orca', [])
+    const sections = sectionProjectOptions(matches, 'orca', [], {
+      name: '开发',
+      projectIds: new Set(['orca'])
+    })
+    expect(sections).toHaveLength(1)
+    expect(sections[0]?.heading).toBeNull()
+  })
+
+  it('splits a short list too, since the space split is help rather than chrome', () => {
+    const matches = rankProjectOptions([orca, relay], '', [])
+    const sections = sectionProjectOptions(matches, '', [], {
+      name: '开发',
+      projectIds: new Set(['orca'])
+    })
+    expect(sections.map((s) => s.key)).toEqual(['space', 'projects'])
+  })
+
+  it('drops the space section entirely when no match belongs to the space', () => {
+    const matches = rankProjectOptions([orca, relay], '', [])
+    const sections = sectionProjectOptions(matches, '', [], {
+      name: '开发',
+      projectIds: new Set(['nonexistent'])
+    })
+    expect(sections.map((s) => s.key)).toEqual(['projects'])
+  })
+})
+
 describe('getAmbiguousProjectOptionIds', () => {
   it('flags only ids whose display name repeats', () => {
     const a = project('a', 'scratch', '~/code/scratch')
