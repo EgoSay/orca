@@ -85,6 +85,7 @@ const SPACES = [
 
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
   useAppStore.setState(initialState, true)
 })
 
@@ -155,7 +156,7 @@ describe('SpaceSwitcher', () => {
     expect(onCreateSpace).toHaveBeenCalled()
   })
 
-  it('marks the trigger and each space item as drop targets, with a shortcut hint on the first nine', () => {
+  it('marks the trigger and each space item as drop targets', () => {
     useAppStore.setState({
       spaces: SPACES,
       activeSpaceId: 'b',
@@ -171,7 +172,32 @@ describe('SpaceSwitcher', () => {
       'data-space-drop-target',
       'a'
     )
+  })
+
+  // Why: `space.selectByIndex` ships a default only on macOS and is rebindable,
+  // so the hint has to come from the keybinding table, never from a literal.
+  it('renders the index hint from the keybinding table on macOS', () => {
+    vi.stubGlobal('navigator', { userAgent: 'Mac' })
+    useAppStore.setState({
+      spaces: SPACES,
+      activeSpaceId: 'b',
+      activateSpace: vi.fn()
+    } as never)
+    render(<SpaceSwitcher onManageMembers={() => {}} onCreateSpace={() => {}} />)
+
     expect(screen.getByText('写作').closest('[role="menuitem"]')?.textContent).toContain('⌘⌥1')
+  })
+
+  it('renders no index hint where the action has no binding', () => {
+    vi.stubGlobal('navigator', { userAgent: 'X11; Linux x86_64' })
+    useAppStore.setState({
+      spaces: SPACES,
+      activeSpaceId: 'b',
+      activateSpace: vi.fn()
+    } as never)
+    render(<SpaceSwitcher onManageMembers={() => {}} onCreateSpace={() => {}} />)
+
+    expect(screen.getByText('写作').closest('[role="menuitem"]')?.textContent).not.toContain('1')
   })
 
   it('rings the item matching highlightSpaceId', () => {

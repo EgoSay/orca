@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 @/store 的 spaces/activeSpaceId/activateSpace，@/store/spaces/space-catalog 的 selectActiveSpace，@/components/ui 的 Button/DropdownMenu，@/lib/utils 的 cn，lucide 的 ChevronDown/Plus/Settings2
+ * [INPUT]: 依赖 @/store 的 spaces/activeSpaceId/activateSpace，@/store/spaces/space-catalog 的 selectActiveSpace，@/hooks/useShortcutLabel 的 useShortcutKeyComboDetails，@/components/ui 的 Button/DropdownMenu，@/lib/utils 的 cn，lucide 的 ChevronDown/Plus/Settings2
  * [OUTPUT]: 对外提供 SpaceSwitcher 组件（含可选受控 open/onOpenChange 与 highlightSpaceId，供拖拽悬停驱动）、SpaceDot 组件
  * [POS]: SidebarToolbar 左簇的空间仪器：切换、新建、管理成员、拖拽落点；路径栏（TitlebarPathBar）是导航仪器，两者并存
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -19,6 +19,7 @@ import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import { selectActiveSpace } from '@/store/spaces/space-catalog'
+import { useShortcutKeyComboDetails } from '@/hooks/useShortcutLabel'
 
 export function SpaceDot({ color }: { color: string | null }): React.JSX.Element {
   return (
@@ -51,6 +52,10 @@ export function SpaceSwitcher({
   const allLabel = translate('auto.components.sidebar.spaces.SpaceSwitcher.all', 'All')
   const label = active?.name ?? allLabel
   const controlledOpenProps = open === undefined ? {} : { open, onOpenChange }
+  // Why: `space.selectByIndex` has no default outside macOS and is rebindable —
+  // never hardcode ⌘⌥. Empty modifiers mean unbound, so render no hint at all.
+  const indexShortcutModifiers =
+    useShortcutKeyComboDetails('space.selectByIndex')[0]?.keys.slice(0, -1) ?? []
 
   return (
     <DropdownMenu modal={false} {...controlledOpenProps}>
@@ -89,8 +94,11 @@ export function SpaceSwitcher({
             <span className="w-4 text-center">{space.icon ?? ''}</span>
             <SpaceDot color={space.color} />
             <span className="truncate">{space.name}</span>
-            {index < 9 ? (
-              <span className="ml-auto text-[10px] text-muted-foreground">⌘⌥{index + 1}</span>
+            {index < 9 && indexShortcutModifiers.length > 0 ? (
+              <span className="ml-auto text-[10px] text-muted-foreground">
+                {indexShortcutModifiers.join('')}
+                {index + 1}
+              </span>
             ) : null}
           </DropdownMenuItem>
         ))}
