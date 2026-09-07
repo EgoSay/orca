@@ -17,6 +17,7 @@ import { useWorkspaceBoardPanel } from './useWorkspaceBoardPanel'
 import { useWorkspaceRevealBodyRedirect } from './use-workspace-reveal-body-redirect'
 import { useSpaceDialogs } from './spaces/use-space-dialogs'
 import { useSpaceKeybindings } from './spaces/use-space-keybindings'
+import { useSidebarSpaceSwipe } from './spaces/use-sidebar-space-swipe'
 import { resolveLeftSidebarStyleVariables } from '@/lib/left-sidebar-appearance'
 import { useSystemPrefersDark } from '@/components/terminal-pane/use-system-prefers-dark'
 import { lazyWithRetry } from '@/lib/lazy-with-retry'
@@ -155,6 +156,7 @@ function Sidebar({
     setWidth: setSidebarWidth,
     onDraftWidthChange: setLiveSidebarWidth
   })
+  useSidebarSpaceSwipe(containerRef)
 
   useWorkspaceRevealBodyRedirect(sidebarOpen && sidebarBody === 'agents')
 
