@@ -6,6 +6,7 @@ import SidebarHeader from './SidebarHeader'
 import SidebarNav from './SidebarNav'
 import SetupScriptPromptCard from './SetupScriptPromptCard'
 import WorktreeList from './WorktreeList'
+import type { SpaceDropTargetId } from './project-header-drag-contract'
 import SidebarToolbar from './SidebarToolbar'
 import WorkspaceKanbanDrawer from './WorkspaceKanbanDrawer'
 import type { VirtualizedScrollAnchor } from '@/hooks/useVirtualizedScrollAnchor'
@@ -116,7 +117,7 @@ function Sidebar({
   // Why: dragging a project header over the space switcher must force it open and
   // highlight the hovered target without adding a second controlled-open prop to
   // SpaceSwitcher — the drag hover ORs into the switcher's single open/onOpenChange pair.
-  const [hoverSpaceTargetId, setHoverSpaceTargetId] = React.useState<string | '' | null>(null)
+  const [hoverSpaceTargetId, setHoverSpaceTargetId] = React.useState<SpaceDropTargetId>(null)
   const [spaceSwitcherManualOpen, setSpaceSwitcherManualOpen] = React.useState(false)
   const spaceSwitcherOpen = spaceSwitcherManualOpen || hoverSpaceTargetId !== null
   // Why: the switcher lives in the sidebar footer, so the picker shortcut has to

@@ -19,6 +19,8 @@ import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 import { selectActiveSpace } from '@/store/spaces/space-catalog'
+import type { SpaceDropTargetId } from '../project-header-drag-contract'
+import { SPACE_SWITCHER_DROP_TARGET } from './space-drop-target'
 import { useShortcutKeyComboDetails } from '@/hooks/useShortcutLabel'
 
 export function SpaceDot({ color }: { color: string | null }): React.JSX.Element {
@@ -43,7 +45,7 @@ export function SpaceSwitcher({
   /** Uncontrolled when omitted; Task 12's drag hover drives it explicitly. */
   open?: boolean
   onOpenChange?: (open: boolean) => void
-  highlightSpaceId?: string | '' | null
+  highlightSpaceId?: SpaceDropTargetId
 }): React.JSX.Element {
   const spaces = useAppStore((s) => s.spaces)
   const activeSpaceId = useAppStore((s) => s.activeSpaceId)
@@ -64,7 +66,7 @@ export function SpaceSwitcher({
           variant="ghost"
           size="sm"
           type="button"
-          data-space-drop-target=""
+          data-space-drop-target={SPACE_SWITCHER_DROP_TARGET}
           aria-label={translate(
             'auto.components.sidebar.spaces.SpaceSwitcher.switch',
             'Switch space, current {{value0}}',

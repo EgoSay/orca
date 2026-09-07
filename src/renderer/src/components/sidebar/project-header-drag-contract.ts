@@ -2,9 +2,10 @@ import type { PointerEvent } from 'react'
 
 import type { ProjectHeaderDragBucketKey, ProjectHeaderDragRect } from './project-header-drop'
 import type { Repo } from '../../../../shared/repo-types'
+import { SPACE_SWITCHER_DROP_TARGET } from './spaces/space-drop-target'
 
-/** '' = the space switcher trigger; a space id = a menu item; null = not over any target. */
-export type SpaceDropTargetId = string | '' | null
+/** SPACE_SWITCHER_DROP_TARGET = the trigger; a space id = a menu item; null = not over any target. */
+export type SpaceDropTargetId = string | null
 
 export type RepoDragState = {
   draggingRepoId: string | null
@@ -72,12 +73,12 @@ export function resolveEndDragOutcome(
   if (!commit || !session.promoted) {
     return { kind: 'none' }
   }
-  // Why: any external target (including '', the trigger) preempts reorder — only a real space
-  // id lands; '' is a no-op rather than falling through to a stale latestDropIndex.
+  // Why: any external target (the trigger included) preempts reorder — only a real
+  // space id lands; the trigger is a no-op rather than falling through to a stale index.
   if (session.externalTargetId !== null) {
-    return session.externalTargetId
-      ? { kind: 'space', spaceId: session.externalTargetId }
-      : { kind: 'none' }
+    return session.externalTargetId === SPACE_SWITCHER_DROP_TARGET
+      ? { kind: 'none' }
+      : { kind: 'space', spaceId: session.externalTargetId }
   }
   if (latestDropIndex !== null) {
     return { kind: 'reorder', sidebarDropIndex: latestDropIndex }

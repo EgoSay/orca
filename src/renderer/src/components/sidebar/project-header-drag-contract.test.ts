@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { resolveEndDragOutcome } from './project-header-drag-contract'
+import { SPACE_SWITCHER_DROP_TARGET } from './spaces/space-drop-target'
 import type { ProjectHeaderDragSession } from './project-header-drag-contract'
 
 function makeSession(overrides: Partial<ProjectHeaderDragSession> = {}): ProjectHeaderDragSession {
@@ -29,7 +30,7 @@ describe('resolveEndDragOutcome', () => {
   })
 
   it('is a no-op when released over the trigger, even with a stale drop index', () => {
-    const session = makeSession({ externalTargetId: '' })
+    const session = makeSession({ externalTargetId: SPACE_SWITCHER_DROP_TARGET })
     expect(resolveEndDragOutcome(session, true, 3)).toEqual({ kind: 'none' })
   })
 

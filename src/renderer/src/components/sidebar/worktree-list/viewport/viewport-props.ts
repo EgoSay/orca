@@ -6,6 +6,7 @@ import type { FolderWorkspace } from '../../../../../../shared/folder-workspace-
 import type { ProjectGroup } from '../../../../../../shared/project-group-types'
 import type { ProjectOrderBy } from '../../../../../../shared/ui-chrome-types'
 import type { Repo } from '../../../../../../shared/repo-types'
+import type { SpaceDropTargetId } from '../../project-header-drag-contract'
 import type {
   WorkspaceLineage,
   WorktreeLineage
@@ -77,7 +78,7 @@ export type VirtualizedWorktreeViewportProps = {
   allRepoIds: string[]
   onReorderHostSections: (orderedHostIds: ExecutionHostId[]) => void
   onHostDragActiveChange: (active: boolean) => void
-  onSpaceDropHoverChange?: (id: string | '' | null) => void
+  onSpaceDropHoverChange?: (id: SpaceDropTargetId) => void
   prCache: AppState['prCache'] | null
   hostedReviewCache: AppState['hostedReviewCache'] | null
   workspaceStatuses: readonly WorkspaceStatusDefinition[]

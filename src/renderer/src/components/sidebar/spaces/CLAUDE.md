@@ -12,7 +12,7 @@ SpaceMemberSheet.tsx: 管理某空间成员的对话框——勾选即调用 set
 use-space-dialogs.tsx: 收口 SpaceCreateSheet/SpaceMemberSheet 的开关状态，供 sidebar/index.tsx 挂载。
 use-space-keybindings.ts: 全局键位监听——双击 ⌃ 开 SpaceSwitcher（DoubleTap+Ctrl，经 ModifierDoubleTapDetector 复用检测器）、⌘⌥数字直切空间（matchKeybindingDigitIndex）；供 sidebar/index.tsx 挂载。
 use-space-keybindings.test.ts: use-space-keybindings 用例——双击 ⌃ 开选择器、数字直切、可编辑目标/终端策略下的免打扰。
-space-drop-target.ts: 纯函数 findSpaceDropTarget(root, x, y) 按 data-space-drop-target 命中测试——'' 触发器/空间 id/null；被 project-header-drag 每次 pointermove 调用。
+space-drop-target.ts: 纯函数 findSpaceDropTarget(root, x, y) 按 data-space-drop-target 命中测试——SPACE_SWITCHER_DROP_TARGET 触发器/空间 id/null；同时导出该哨兵常量（空字符串，因为触发器带的是裸属性）。
 space-drop-target.test.ts: findSpaceDropTarget 的命中测试用例（触发器/菜单项/空白处）。
 space-swipe.ts: 纯状态机——createSwipeTracker(threshold+lockMs 去抖去重触发) 与 nextSpaceId(spaces+全部 null 的环形顺序)；被 use-sidebar-space-swipe 消费。
 space-swipe.test.ts: createSwipeTracker 阈值/锁定窗口、nextSpaceId 环形顺序（含 全部/null）的用例。

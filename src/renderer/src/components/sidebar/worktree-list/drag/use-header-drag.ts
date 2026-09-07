@@ -5,6 +5,7 @@ import { getProjectGroupHostId } from '@/store/slices/project-group-owner-routin
 import type { ProjectGroup } from '../../../../../../shared/project-group-types'
 import type { ProjectOrderBy } from '../../../../../../shared/ui-chrome-types'
 import type { Repo } from '../../../../../../shared/repo-types'
+import type { SpaceDropTargetId } from '../../project-header-drag-contract'
 import type { ExecutionHostId } from '../../../../../../shared/execution-host'
 import type { HostHeaderRow, HostSectionRow } from '../../host-section-rows'
 import type { Row, WorktreeGroupBy } from '../grouping/row-types'
@@ -59,7 +60,7 @@ export function useWorktreeSidebarHeaderDrag(args: {
   onHostDragActiveChange: (active: boolean) => void
   suppressMeasurementAdjustmentUntilRef: React.MutableRefObject<number>
   directScrollInputUntilRef: React.MutableRefObject<number>
-  onSpaceDropHoverChange?: (id: string | '' | null) => void
+  onSpaceDropHoverChange?: (id: SpaceDropTargetId) => void
 }) {
   const {
     rows,

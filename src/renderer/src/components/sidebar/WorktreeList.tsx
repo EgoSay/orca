@@ -9,6 +9,7 @@ import {
 } from '@/store/selectors'
 import type { ProjectGroup } from '../../../../shared/project-group-types'
 import type { Repo } from '../../../../shared/repo-types'
+import type { SpaceDropTargetId } from './project-header-drag-contract'
 import {
   getRepoExecutionHostId,
   getSettingsFocusedExecutionHostId
@@ -45,7 +46,7 @@ type WorktreeListProps = {
   onWorkspaceBoardDragPreviewStart?: () => void
   onWorkspaceBoardDragPreviewCommit?: () => void
   onWorkspaceBoardDragPreviewCancel?: () => void
-  onSpaceDropHoverChange?: (id: string | '' | null) => void
+  onSpaceDropHoverChange?: (id: SpaceDropTargetId) => void
 }
 
 const WorktreeList = React.memo(function WorktreeList({

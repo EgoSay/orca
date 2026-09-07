@@ -6,6 +6,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { ScrollToCurrentWorkspaceToolbarButton } from './ScrollToCurrentWorkspaceToolbarButton'
 import { SidebarSettingsHelpMenu } from './SidebarSettingsHelpMenu'
 import { SpaceSwitcher } from './spaces/SpaceSwitcher'
+import type { SpaceDropTargetId } from './project-header-drag-contract'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { hasFeatureInteraction } from '../../../../shared/feature-interactions'
@@ -21,7 +22,7 @@ type SidebarToolbarProps = {
   onCreateSpace: () => void
   spaceSwitcherOpen: boolean
   onSpaceSwitcherOpenChange: (open: boolean) => void
-  highlightSpaceId: string | '' | null
+  highlightSpaceId: SpaceDropTargetId
 }
 
 const SidebarToolbar = React.memo(function SidebarToolbar({
