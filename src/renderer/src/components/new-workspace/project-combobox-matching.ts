@@ -112,14 +112,21 @@ export function sectionProjectOptions(
     return [{ key: 'results', heading: null, items: [...matches] }]
   }
   if (spaceScope) {
-    const inSpace = matches.filter(
-      (m) => m.option.kind === 'project' && spaceScope.projectIds.has(m.option.projectId)
-    )
-    const rest = matches.filter((m) => !inSpace.includes(m))
+    const inSpace = (m: ScoredProjectOption): boolean =>
+      m.option.kind === 'project' && spaceScope.projectIds.has(m.option.projectId)
     // Why: projects outside the space stay listed — hiding them reads as "my project is gone".
     const spaceSections: ProjectOptionSection[] = [
-      { key: 'space', heading: spaceScope.name, items: inSpace },
-      { key: 'projects', heading: 'Other projects', items: rest }
+      { key: 'space', heading: spaceScope.name, items: matches.filter(inSpace) },
+      {
+        key: 'projects',
+        heading: 'Other projects',
+        items: matches.filter((m) => m.option.kind === 'project' && !inSpace(m))
+      },
+      {
+        key: 'folders',
+        heading: 'Folders',
+        items: matches.filter((m) => m.option.kind === 'project-group')
+      }
     ]
     return spaceSections.filter((section) => section.items.length > 0)
   }

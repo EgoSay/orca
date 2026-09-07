@@ -11,6 +11,19 @@ function project(id: string, displayName: string, detail: string): NewWorkspaceP
   return { kind: 'project', id, projectId: id, displayName, badgeColor: '#111', detail }
 }
 
+function folder(id: string, displayName: string): NewWorkspaceProjectOption {
+  return {
+    kind: 'project-group',
+    id,
+    projectGroupId: id,
+    displayName,
+    badgeColor: '#111',
+    detail: '~/code',
+    parentPath: '~/code',
+    connectionId: null
+  }
+}
+
 const orca = project('orca', 'orca', 'stablyai/orca')
 const relay = project('relay', 'orca-relay', 'stablyai/orca-relay')
 const gateway = project('gateway', 'api-gateway', 'acme/api-gateway')
@@ -108,6 +121,20 @@ describe('sectionProjectOptions with a space scope', () => {
       projectIds: new Set(['nonexistent'])
     })
     expect(sections.map((s) => s.key)).toEqual(['projects'])
+  })
+
+  it('keeps folders in their own section, separate from Other projects', () => {
+    const scratch = folder('f1', 'scratch')
+    const matches = rankProjectOptions([orca, relay, scratch], '', [])
+    const sections = sectionProjectOptions(matches, '', [], {
+      name: '开发',
+      projectIds: new Set(['orca'])
+    })
+    expect(sections.map((s) => s.key)).toEqual(['space', 'projects', 'folders'])
+    expect(sections.map((s) => s.heading)).toEqual(['开发', 'Other projects', 'Folders'])
+    expect(sections[0]?.items.map((m) => m.option.id)).toEqual(['orca'])
+    expect(sections[1]?.items.map((m) => m.option.id)).toEqual(['relay'])
+    expect(sections[2]?.items.map((m) => m.option.id)).toEqual(['f1'])
   })
 })
 
