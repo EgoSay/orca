@@ -87,12 +87,14 @@ export function useSpaceKeybindings({ openPicker }: { openPicker: () => void }):
     // Why: a window blur mid-gesture must not leave the detector armed.
     const onBlur = (): void => doubleTapDetector.reset()
 
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('keyup', onKeyUp)
+    // Why: capture phase — a descendant's bubble-phase stopPropagation() must not
+    // hide this global gesture from us (mirrors use-global-keybindings.ts).
+    window.addEventListener('keydown', onKeyDown, { capture: true })
+    window.addEventListener('keyup', onKeyUp, { capture: true })
     window.addEventListener('blur', onBlur)
     return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('keydown', onKeyDown, { capture: true })
+      window.removeEventListener('keyup', onKeyUp, { capture: true })
       window.removeEventListener('blur', onBlur)
     }
   }, [])
