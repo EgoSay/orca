@@ -30,6 +30,7 @@ export type EmptyQueryWorktreeVisibilityInput = {
   ptyIdsByTabId: Parameters<typeof isInactiveWorkspace>[2]
   browserTabsByWorktree: Parameters<typeof isInactiveWorkspace>[3]
   worktreeIdsWithLiveAgent: ReadonlySet<string>
+  worktreeIdsWithStructuredChat: ReadonlySet<string>
 }
 
 /** The ⌘J empty-query row set: the sidebar's hide switches plus the active palette filter. */
@@ -69,7 +70,8 @@ export function buildEmptyQueryWorktreeVisibility(
         input.tabsByWorktree,
         input.ptyIdsByTabId,
         input.browserTabsByWorktree,
-        input.worktreeIdsWithLiveAgent
+        input.worktreeIdsWithLiveAgent,
+        input.worktreeIdsWithStructuredChat
       )
     )
   }
