@@ -1,6 +1,13 @@
-import { useDeferredValue, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import type { WorktreePaletteRequestGuard } from '@/lib/worktree-palette-create-action'
-import { EMPTY_PALETTE_FILTER, type PaletteFilterState } from '@/components/cmd-j/palette-filter'
+import {
+  buildPaletteFilterFromSidebarScope,
+  type PaletteFilterState
+} from '@/components/cmd-j/palette-filter'
+import { planSpaceSeed } from '@/components/cmd-j/palette-space-scope'
+import { useAppStore } from '@/store'
+import { selectActiveSpaceRepoIds } from '@/store/spaces/space-catalog'
 import { parseCmdJTaskSourceUrl } from '@/lib/worktree-palette-task-url-match'
 import { getWorktreePaletteCreateActionState } from '@/lib/worktree-palette-create-action'
 import type { CmdJActiveGroupSnapshot } from '@/components/cmd-j/quick-action-context'
@@ -14,6 +21,13 @@ export function useWorktreeJumpPaletteLocalState({
   createLookupGuard: WorktreePaletteRequestGuard
   visible: boolean
 }) {
+  const sidebarScope = useAppStore(
+    useShallow((state) => ({
+      filterRepoIds: state.filterRepoIds,
+      visibleWorkspaceHostIds: state.visibleWorkspaceHostIds,
+      workspaceHostScope: state.workspaceHostScope
+    }))
+  )
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
   const liveQueryRef = useRef(query)
@@ -34,7 +48,31 @@ export function useWorktreeJumpPaletteLocalState({
   // Create is armed by an explicit keyboard/pointer move, except for task URLs.
   const selectionMovedByUserRef = useRef(false)
   const digitShortcutItemsRef = useRef<readonly PaletteItem[]>([])
-  const [rawFilter, setRawFilter] = useState<PaletteFilterState>(EMPTY_PALETTE_FILTER)
+  const [filter, setFilter] = useState<PaletteFilterState>(() =>
+    buildPaletteFilterFromSidebarScope(sidebarScope)
+  )
+  // Spec §6.3: inside a space the palette opens scoped to its repositories, layered on the
+  // sidebar seed above. A ref remembers "seeded this open" so a chip the user clears stays
+  // cleared, while a repo set that hydrates late still seeds once.
+  const activeSpaceId = useAppStore((state) => state.activeSpaceId)
+  const activeSpaceRepoIds = useAppStore(selectActiveSpaceRepoIds)
+  const seededSpaceIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!visible) {
+      seededSpaceIdRef.current = null
+      return
+    }
+    const seed = planSpaceSeed({
+      activeSpaceId,
+      activeSpaceRepoIds,
+      seededSpaceId: seededSpaceIdRef.current
+    })
+    if (!seed) {
+      return
+    }
+    seededSpaceIdRef.current = seed.spaceId
+    setFilter(buildPaletteFilterFromSidebarScope({ ...sidebarScope, filterRepoIds: seed.repoIds }))
+  }, [visible, activeSpaceId, activeSpaceRepoIds, sidebarScope])
   const [dialogElement, setDialogElement] = useState<HTMLElement | null>(null)
   const previousWorktreeIdRef = useRef<string | null>(null)
   const previousActiveTabTypeRef = useRef<WorkspaceVisibleTabType>('terminal')
@@ -51,15 +89,18 @@ export function useWorktreeJumpPaletteLocalState({
   const preserveCreateLookupOnCloseRef = useRef(false)
   const [expandedSectionCaps, setExpandedSectionCaps] = useState<Record<string, number>>({})
 
-  // Reset expansion after a new query or a fresh open without adding an extra effect render.
+  // Reset expansion and seed each open before the palette paints.
   const [previousQuery, setPreviousQuery] = useState(query)
   const [previousVisible, setPreviousVisible] = useState(visible)
-  if (previousQuery !== query || previousVisible !== visible) {
+  const visibilityChanged = previousVisible !== visible
+  if (previousQuery !== query || visibilityChanged) {
     setPreviousQuery(query)
     setPreviousVisible(visible)
     setExpandedSectionCaps({})
+    if (visibilityChanged && visible) {
+      setFilter(buildPaletteFilterFromSidebarScope(sidebarScope))
+    }
   }
-
   return {
     query,
     setQuery,
@@ -75,8 +116,8 @@ export function useWorktreeJumpPaletteLocalState({
     autoSelectedItemIdRef,
     selectionMovedByUserRef,
     digitShortcutItemsRef,
-    rawFilter,
-    setRawFilter,
+    filter,
+    setFilter,
     dialogElement,
     setDialogElement,
     previousWorktreeIdRef,
@@ -94,8 +135,7 @@ export function useWorktreeJumpPaletteLocalState({
     createLookupGuard,
     preserveCreateLookupOnCloseRef,
     expandedSectionCaps,
-    setExpandedSectionCaps,
-    previousVisible
+    setExpandedSectionCaps
   }
 }
 

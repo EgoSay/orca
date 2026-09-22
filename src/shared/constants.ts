@@ -65,15 +65,13 @@ export const BROWSER_FAMILY_LABELS: Record<string, string> = {
 }
 
 // Why: only the initial value shown in Settings; buildFontFamily() adds the real cross-platform fallback chain.
+const TERMINAL_FONT_BY_PLATFORM: Record<string, string> = {
+  win32: 'Cascadia Mono',
+  linux: 'DejaVu Sans Mono'
+}
 function defaultTerminalFontFamily(): string {
   const platform = typeof process !== 'undefined' ? process.platform : ''
-  if (platform === 'win32') {
-    return 'Cascadia Mono'
-  }
-  if (platform === 'linux') {
-    return 'DejaVu Sans Mono'
-  }
-  return 'SF Mono' // macOS default
+  return TERMINAL_FONT_BY_PLATFORM[platform] ?? 'SF Mono' // macOS default
 }
 
 export const getDefaultPrimarySelectionMiddleClickPaste = (
@@ -173,6 +171,7 @@ export function getDefaultSettings(homedir: string): GlobalSettings {
     terminalInactivePaneOpacity: DEFAULT_TERMINAL_INACTIVE_PANE_OPACITY,
     terminalRightClickToPaste: getDefaultTerminalRightClickToPaste(),
     notifications: getDefaultNotificationSettings(),
+
     voice: getDefaultVoiceSettings()
   })
 }
@@ -275,6 +274,7 @@ export function getDefaultUIState(): PersistedUIState {
     agentsFilterRepoIds: [],
     agentsShowChildAgents: false,
     agentsCompactMode: true,
+    agentsShowSearch: true,
     agentsReadFilter: DEFAULT_AGENTS_READ_FILTER,
     agentsGroupBy: DEFAULT_AGENTS_GROUP_BY,
     collapsedGroups: [],
@@ -296,6 +296,7 @@ export function getDefaultUIState(): PersistedUIState {
     usagePercentageDisplay: DEFAULT_USAGE_PERCENTAGE_DISPLAY,
     statusBarUsageMode: DEFAULT_STATUS_BAR_USAGE_MODE,
     dismissedUpdateVersion: null,
+    dismissedUnexpectedSignoutVersion: null,
     lastUpdateCheckAt: null,
     trustedOrcaHooks: {},
     setupScriptPromptDismissedRepoIds: [],

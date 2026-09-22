@@ -52,6 +52,7 @@ import {
 } from '../persisted-ui-write-baseline'
 import {
   hydrateTrustedOrcaHooks,
+  hydrateUnexpectedSignoutDismissal,
   normalizeHydratedVisibleWorkspaceHostIds,
   preserveStringArrayIdentity,
   sanitizeHydratedActiveView,
@@ -187,6 +188,7 @@ export function createUiHydrationActions(set: UISliceSet, _get: UISliceGet): Par
           ),
           agentsShowChildAgents: ui.agentsShowChildAgents === true,
           agentsCompactMode: ui.agentsCompactMode !== false,
+          agentsShowSearch: ui.agentsShowSearch !== false,
           agentsReadFilter: normalizeThreadReadFilter(ui.agentsReadFilter),
           agentsGroupBy: normalizeActivityGroupBy(ui.agentsGroupBy),
           collapsedGroups: new Set(ui.collapsedGroups ?? []),
@@ -217,15 +219,10 @@ export function createUiHydrationActions(set: UISliceSet, _get: UISliceGet): Par
             if (typeof id !== 'string') {
               return DEFAULT_PET_ID
             }
-            if (isBundledPetId(id)) {
-              return id
-            }
-            if (customPets.some((m) => m.id === id)) {
-              return id
-            }
-            return DEFAULT_PET_ID
+            return isBundledPetId(id) || customPets.some((m) => m.id === id) ? id : DEFAULT_PET_ID
           })(),
           dismissedUpdateVersion: ui.dismissedUpdateVersion ?? null,
+          ...hydrateUnexpectedSignoutDismissal(s, ui.dismissedUnexpectedSignoutVersion),
           // Why: a persisted value from a build that knew a different channel set
           // would otherwise survive as-is; activeChannel only falls back on null,
           // so an unknown string reaches listBuilds and the segmented control.

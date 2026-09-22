@@ -262,7 +262,7 @@ export function getFolderWorkspaceOperations(
 }
 
 export function installProjectCollectionOperationsContext(
-  target: object,
+  target: ProjectCollectionOperations,
   source: ProjectCollectionOperations
 ): void {
   Object.defineProperty(target, projectCollectionOperationsContext, {
