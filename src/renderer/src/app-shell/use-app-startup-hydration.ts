@@ -40,9 +40,8 @@ import { ensureLocalRuntimeCapabilities } from '../runtime/local-runtime-capabil
 
 async function listRuntimeSessionHostIdsForStartup(): Promise<ExecutionHostId[]> {
   try {
-    return (await window.api.runtimeEnvironments.list()).map((environment) =>
-      toRuntimeExecutionHostId(environment.id)
-    )
+    const environments = await window.api.runtimeEnvironments.list()
+    return environments.map((environment) => toRuntimeExecutionHostId(environment.id))
   } catch (err) {
     console.warn('Failed to list runtime session hosts for startup:', err)
     return []

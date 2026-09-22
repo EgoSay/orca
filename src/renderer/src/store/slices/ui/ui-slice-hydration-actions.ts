@@ -219,13 +219,7 @@ export function createUiHydrationActions(set: UISliceSet, _get: UISliceGet): Par
             if (typeof id !== 'string') {
               return DEFAULT_PET_ID
             }
-            if (isBundledPetId(id)) {
-              return id
-            }
-            if (customPets.some((m) => m.id === id)) {
-              return id
-            }
-            return DEFAULT_PET_ID
+            return isBundledPetId(id) || customPets.some((m) => m.id === id) ? id : DEFAULT_PET_ID
           })(),
           dismissedUpdateVersion: ui.dismissedUpdateVersion ?? null,
           ...hydrateUnexpectedSignoutDismissal(s, ui.dismissedUnexpectedSignoutVersion),
