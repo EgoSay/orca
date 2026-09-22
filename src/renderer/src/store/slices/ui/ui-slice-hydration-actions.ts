@@ -153,6 +153,7 @@ export function createUiHydrationActions(set: UISliceSet, _get: UISliceGet): Par
           // Why: ignore older positive-form keys so old profiles start from the new default (sleeping workspaces visible).
           showSleepingWorkspaces: !(ui.hideSleepingWorkspaces ?? DEFAULT_HIDE_SLEEPING_WORKSPACES),
           workspaceHostScope: normalizeExecutionHostScope(ui.workspaceHostScope),
+          activeSpaceId: typeof ui.activeSpaceId === 'string' ? ui.activeSpaceId : null,
           visibleWorkspaceHostIds: normalizeHydratedVisibleWorkspaceHostIds(ui),
           workspaceHostOrder: normalizeExecutionHostOrder(ui.workspaceHostOrder),
           // Why: a malformed or legacy filter value must degrade to All hosts, never throw during hydration.

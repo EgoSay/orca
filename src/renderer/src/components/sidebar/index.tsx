@@ -6,6 +6,7 @@ import SidebarHeader from './SidebarHeader'
 import SidebarNav from './SidebarNav'
 import SetupScriptPromptCard from './SetupScriptPromptCard'
 import WorktreeList from './WorktreeList'
+import type { SpaceDropTargetId } from './project-header-drag-contract'
 import SidebarToolbar from './SidebarToolbar'
 import WorkspaceKanbanDrawer from './WorkspaceKanbanDrawer'
 import type { VirtualizedScrollAnchor } from '@/hooks/useVirtualizedScrollAnchor'
@@ -15,6 +16,9 @@ import { ActivityThreadCollapseContext } from '@/components/activity/activity-th
 import { useSidebarProjectDrop } from './useSidebarProjectDrop'
 import { useWorkspaceBoardPanel } from './useWorkspaceBoardPanel'
 import { useWorkspaceRevealBodyRedirect } from './use-workspace-reveal-body-redirect'
+import { useSpaceDialogs } from './spaces/use-space-dialogs'
+import { useSpaceKeybindings } from './spaces/use-space-keybindings'
+import { useSidebarSpaceSwipe } from './spaces/use-sidebar-space-swipe'
 import { resolveLeftSidebarStyleVariables } from '@/lib/left-sidebar-appearance'
 import { useSystemPrefersDark } from '@/components/terminal-pane/use-system-prefers-dark'
 import { lazyWithRetry } from '@/lib/lazy-with-retry'
@@ -49,6 +53,7 @@ function Sidebar({
   worktreeScrollAnchorRef
 }: SidebarProps): React.JSX.Element {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen)
+  const setSidebarOpen = useAppStore((s) => s.setSidebarOpen)
   const sidebarWidth = useAppStore((s) => s.sidebarWidth)
   const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
   const repos = useAppStore((s) => s.repos)
@@ -108,6 +113,27 @@ function Sidebar({
     solidifyWorkspaceBoardFromDrag,
     cancelWorkspaceBoardDragPreview
   } = useWorkspaceBoardPanel()
+  const spaceDialogs = useSpaceDialogs()
+  // Why: dragging a project header over the space switcher must force it open and
+  // highlight the hovered target without adding a second controlled-open prop to
+  // SpaceSwitcher — the drag hover ORs into the switcher's single open/onOpenChange pair.
+  const [hoverSpaceTargetId, setHoverSpaceTargetId] = React.useState<SpaceDropTargetId>(null)
+  const [spaceSwitcherManualOpen, setSpaceSwitcherManualOpen] = React.useState(false)
+  const spaceSwitcherOpen = spaceSwitcherManualOpen || hoverSpaceTargetId !== null
+  // Why: the switcher lives in the sidebar footer, so the picker shortcut has to
+  // reveal the sidebar first — otherwise the flag arms nothing and the menu pops
+  // open unbidden the next time the sidebar is shown.
+  useSpaceKeybindings({
+    openPicker: () => {
+      setSidebarOpen(true)
+      setSpaceSwitcherManualOpen(true)
+    }
+  })
+  useEffect(() => {
+    if (!sidebarOpen) {
+      setSpaceSwitcherManualOpen(false)
+    }
+  }, [sidebarOpen])
 
   const setLiveSidebarWidth = React.useCallback((width: number) => {
     document.documentElement.style.setProperty('--workspace-sidebar-live-width', `${width}px`)
@@ -145,6 +171,7 @@ function Sidebar({
     setWidth: setSidebarWidth,
     onDraftWidthChange: setLiveSidebarWidth
   })
+  useSidebarSpaceSwipe(containerRef)
 
   useWorkspaceRevealBodyRedirect(sidebarOpen && sidebarBody === 'agents')
 
@@ -188,6 +215,8 @@ function Sidebar({
                 onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
                 onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
                 onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
+                onSpaceDropHoverChange={setHoverSpaceTargetId}
+                onManageSpaceMembers={spaceDialogs.openMembers}
               />
             )}
 
@@ -199,6 +228,11 @@ function Sidebar({
                 workspaceBoardOpen={workspaceBoardOpen}
                 workspaceBoardDragPreviewOpen={workspaceBoardDragPreviewOpen}
                 onWorkspaceBoardToggle={toggleWorkspaceBoard}
+                onManageSpaceMembers={spaceDialogs.openMembers}
+                onCreateSpace={spaceDialogs.openCreate}
+                spaceSwitcherOpen={spaceSwitcherOpen}
+                onSpaceSwitcherOpenChange={setSpaceSwitcherManualOpen}
+                highlightSpaceId={hoverSpaceTargetId}
               />
             </div>
           </>
@@ -249,6 +283,7 @@ function Sidebar({
         {activeModal === 'confirm-orca-yaml-hooks' ? <OrcaYamlTrustDialog /> : null}
         {activeModal === 'forget-ssh-workspace' ? <ForgetSshWorkspaceDialog /> : null}
       </React.Suspense>
+      {spaceDialogs.dialogs}
       {sidebarOpen ? (
         <WorkspaceKanbanDrawer
           leftSidebarStyle={leftSidebarStyle}

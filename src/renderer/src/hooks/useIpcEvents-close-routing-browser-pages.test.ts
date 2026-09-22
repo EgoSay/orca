@@ -114,6 +114,7 @@ describe('useIpcEvents browser tab close routing', () => {
       dispatchEvent: vi.fn(),
       api: {
         repos: { onChanged: () => () => {} },
+        spaces: { onChanged: () => () => {} },
         automations: { onChanged: () => () => {} },
         worktrees: {
           onChanged: () => () => {},
@@ -340,6 +341,7 @@ describe('useIpcEvents browser tab close routing', () => {
       dispatchEvent: vi.fn(),
       api: {
         repos: { onChanged: () => () => {} },
+        spaces: { onChanged: () => () => {} },
         automations: { onChanged: () => () => {} },
         worktrees: {
           onChanged: () => () => {},
@@ -561,6 +563,7 @@ describe('useIpcEvents browser tab close routing', () => {
       dispatchEvent: vi.fn(),
       api: {
         repos: { onChanged: () => () => {} },
+        spaces: { onChanged: () => () => {} },
         automations: { onChanged: () => () => {} },
         worktrees: {
           onChanged: () => () => {},

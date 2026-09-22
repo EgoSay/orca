@@ -36,6 +36,7 @@ export type WorktreeItemRowContext = {
   worktreePointerDragRef: React.MutableRefObject<WorktreePointerDrag | null>
   nativeLineageDropTargetId: string | null
   activeWorktreeId: string | null
+  activeSpaceRepoIds?: ReadonlySet<string>
   activeWorkspaceExecutionHostId: ExecutionHostId | null
   currentWorktreeId: string | null
   highlightedRevealRowKey: string | null
@@ -147,6 +148,8 @@ export function renderWorktreeItemRow(
     (!ctx.activeWorkspaceExecutionHostId ||
       worktreeIdentity ===
         composeWorktreeHostIdentity(ctx.activeWorkspaceExecutionHostId, itemRow.worktree.id))
+  const isGuestInActiveSpace =
+    ctx.activeSpaceRepoIds !== undefined && !ctx.activeSpaceRepoIds.has(itemRow.worktree.repoId)
   return (
     <div
       key={itemRow.rowKey}
@@ -213,6 +216,7 @@ export function renderWorktreeItemRow(
         onCardDragStart={ctx.onCardDragStart}
         onCardDragEnd={ctx.onCardDragEnd}
         hideRepoBadge={ctx.groupBy === 'repo'}
+        isGuestInActiveSpace={isGuestInActiveSpace}
         // Why: pinned worktrees mix repos in one section, so only it needs the leading repo identity chip.
         hostContextLabel={itemRow.hostContextLabel}
         inPinnedSection={itemRow.sectionKey === PINNED_GROUP_KEY}

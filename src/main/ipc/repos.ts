@@ -5,6 +5,7 @@ import { registerRepoCatalogHandlers } from './repos/repo-catalog-handlers'
 import { registerProjectHostSetupHandlers } from './repos/project-host-setup-handlers'
 import { registerRepoCreationHandlers } from './repos/repo-creation-handlers'
 import { registerProjectGroupHandlers } from './repos/project-group-handlers'
+import { registerSpaceHandlers } from './repos/space-handlers'
 import { registerFolderWorkspaceHandlers } from './repos/folder-workspace-handlers'
 import { registerNestedRepoImportHandler } from './repos/nested-repo-import-handler'
 import { registerRepoUpdateHandler } from './repos/repo-update-handler'
@@ -44,6 +45,12 @@ export function registerRepoHandlers(
   ipcMain.removeHandler('projectGroups:scanNested')
   ipcMain.removeHandler('projectGroups:cancelNestedScan')
   ipcMain.removeHandler('projectGroups:importNested')
+  ipcMain.removeHandler('spaces:list')
+  ipcMain.removeHandler('spaces:create')
+  ipcMain.removeHandler('spaces:update')
+  ipcMain.removeHandler('spaces:setMembers')
+  ipcMain.removeHandler('spaces:delete')
+  ipcMain.removeHandler('spaces:reorder')
   ipcMain.removeHandler('folderWorkspaces:list')
   ipcMain.removeHandler('folderWorkspaces:create')
   ipcMain.removeHandler('folderWorkspaces:update')
@@ -72,6 +79,7 @@ export function registerRepoHandlers(
   registerProjectHostSetupHandlers(mainWindow, store)
   registerRepoCreationHandlers(mainWindow, store)
   registerProjectGroupHandlers(mainWindow, store)
+  registerSpaceHandlers(mainWindow, store)
   registerFolderWorkspaceHandlers(mainWindow, store, runtime)
   registerNestedRepoImportHandler(mainWindow, store)
   registerRepoUpdateHandler(mainWindow, store)

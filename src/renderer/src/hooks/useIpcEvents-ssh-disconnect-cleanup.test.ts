@@ -124,6 +124,7 @@ describe('useIpcEvents updater integration', () => {
     vi.stubGlobal('window', {
       api: {
         repos: { onChanged: () => () => {} },
+        spaces: { onChanged: () => () => {} },
         automations: { onChanged: () => () => {} },
         worktrees: {
           onChanged: () => () => {},

@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
+import { useAppStore } from '@/store'
+import { selectActiveSpace, selectSpaceMemberIdForRepo } from '@/store/spaces/space-catalog'
 import { getRepositoryIconSectionId } from '@/components/settings/repository-settings-targets'
 import type { ProjectGroup } from '../../../../../../shared/project-group-types'
 import type { Repo } from '../../../../../../shared/repo-types'
@@ -65,6 +67,7 @@ export type RepoHeaderProjectActions = {
   onRemoveProjectFromGroup: (repo: Repo) => void
   onRemoveProject: (repo: Repo) => void
   onCreateForRepo: (projectId: string) => void
+  onRemoveProjectFromSpace?: (repo: Repo) => void
 }
 
 export function RepoHeaderProjectActionsMenu({
@@ -78,6 +81,11 @@ export function RepoHeaderProjectActionsMenu({
   projectGroups: readonly ProjectGroup[]
   actions: RepoHeaderProjectActions
 }): React.JSX.Element {
+  const activeSpace = useAppStore(selectActiveSpace)
+  // Why: skip the setup-map lookup under 全部, where the value is never read.
+  const repoSpaceMemberId = useAppStore((s) =>
+    s.activeSpaceId ? selectSpaceMemberIdForRepo(s, repo.id) : null
+  )
   return (
     <DropdownMenu modal={false}>
       <Tooltip>
@@ -161,6 +169,19 @@ export function RepoHeaderProjectActionsMenu({
           <DropdownMenuItem onSelect={() => actions.onRemoveProjectFromGroup(repo)}>
             <CircleX className="size-3.5" />
             {translate('auto.components.sidebar.WorktreeList.64e55f7f01', 'Remove from group')}
+          </DropdownMenuItem>
+        ) : null}
+        {activeSpace &&
+        repoSpaceMemberId &&
+        activeSpace.memberIds.includes(repoSpaceMemberId) &&
+        actions.onRemoveProjectFromSpace ? (
+          <DropdownMenuItem onSelect={() => actions.onRemoveProjectFromSpace?.(repo)}>
+            <CircleX className="size-3.5" />
+            {translate(
+              'auto.components.sidebar.WorktreeList.removeFromSpace',
+              'Remove from {{value0}}',
+              { value0: activeSpace.name }
+            )}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />

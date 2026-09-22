@@ -32,6 +32,8 @@ export type KeybindingActionId =
   | 'app.settings'
   | 'app.forceReload'
   | 'workspace.create'
+  | 'space.picker'
+  | 'space.selectByIndex'
   | 'workspace.rename'
   | 'workspace.delete'
   | 'workspace.openBoard'

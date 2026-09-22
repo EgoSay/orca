@@ -1,14 +1,11 @@
 import { useEffect } from 'react'
-import {
-  keybindingMatchesAction,
-  type KeybindingContext,
-  type KeybindingInput
-} from '../../../../shared/keybindings'
+import { keybindingMatchesAction, type KeybindingInput } from '../../../../shared/keybindings'
 import {
   ModifierDoubleTapDetector,
   toModifierDoubleTapEvent
 } from '../../../../shared/modifier-double-tap-detector'
 import { getShortcutPlatform } from '@/lib/shortcut-platform'
+import { getKeybindingContext } from '@/lib/keybinding-context'
 import { TOGGLE_QUICK_COMMANDS_MENU_EVENT } from '@/lib/quick-commands-menu-events'
 import { useAppStore } from '@/store'
 
@@ -17,19 +14,9 @@ type UseTabBarQuickCommandsShortcutParams = {
   onOpenChange: (next: boolean) => void
 }
 
-function targetHasClass(target: EventTarget | null, className: string): boolean {
-  const classList = (target as { classList?: { contains?: (value: string) => boolean } } | null)
-    ?.classList
-  return typeof classList?.contains === 'function' && classList.contains(className)
-}
-
 function targetMatchesClosest(target: EventTarget | null, selector: string): boolean {
   const closest = (target as { closest?: (value: string) => unknown } | null)?.closest
   return typeof closest === 'function' && Boolean(closest.call(target, selector))
-}
-
-function getQuickCommandsShortcutContext(target: EventTarget | null): KeybindingContext {
-  return targetHasClass(target, 'xterm-helper-textarea') ? 'terminal' : 'app'
 }
 
 export function useTabBarQuickCommandsShortcut({
@@ -51,7 +38,7 @@ export function useTabBarQuickCommandsShortcut({
     const platform = getShortcutPlatform()
     const doubleTapDetector = new ModifierDoubleTapDetector()
     const matchesShortcut = (input: KeybindingInput, target: EventTarget | null): boolean => {
-      const context = getQuickCommandsShortcutContext(target)
+      const context = getKeybindingContext(target)
       return keybindingMatchesAction('tab.openQuickCommandsMenu', input, platform, keybindings, {
         context,
         terminalShortcutPolicy

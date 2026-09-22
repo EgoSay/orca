@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useAppStore } from '@/store'
+import { selectActiveSpaceRepoIds } from '@/store/spaces/space-catalog'
 import { DEFAULT_SHOW_SLEEPING_WORKSPACES } from '../../../../../../shared/constants'
 import { computeClearFilterActions, sidebarHasActiveFilters } from '../../visible-worktrees'
 
@@ -17,6 +18,7 @@ export function useSidebarWorktreeFilters() {
   const alwaysShowDefaultBranchWorkspace = useAppStore((s) => s.alwaysShowDefaultBranchWorkspace)
   const visibleWorkspaceHostIds = useAppStore((s) => s.visibleWorkspaceHostIds)
   const workspaceHostScope = useAppStore((s) => s.workspaceHostScope)
+  const activeSpaceRepoIds = useAppStore(selectActiveSpaceRepoIds)
 
   const setShowSleepingWorkspaces = useAppStore((s) => s.setShowSleepingWorkspaces)
   const setHideDefaultBranchWorkspace = useAppStore((s) => s.setHideDefaultBranchWorkspace)
@@ -44,7 +46,8 @@ export function useSidebarWorktreeFilters() {
       hideWorkspacesFromOtherDevices,
       alwaysShowDefaultBranchWorkspace,
       visibleWorkspaceHostIds,
-      workspaceHostScope
+      workspaceHostScope,
+      activeSpaceRepoIds
     }),
     [
       showSleepingWorkspaces,
@@ -56,7 +59,8 @@ export function useSidebarWorktreeFilters() {
       hideWorkspacesFromOtherDevices,
       alwaysShowDefaultBranchWorkspace,
       visibleWorkspaceHostIds,
-      workspaceHostScope
+      workspaceHostScope,
+      activeSpaceRepoIds
     ]
   )
 

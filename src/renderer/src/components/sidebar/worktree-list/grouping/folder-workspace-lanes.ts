@@ -1,5 +1,7 @@
 import type { FolderWorkspace } from '../../../../../../shared/folder-workspace-types'
+import { getProjectGroupSubtreeIds } from '../../../../../../shared/project-groups'
 import type { ProjectGroup } from '../../../../../../shared/project-group-types'
+import type { Repo } from '../../../../../../shared/repo-types'
 import type { WorkspaceStatusDefinition } from '../../../../../../shared/worktree/types'
 import {
   getWorkspaceStatus,
@@ -25,14 +27,31 @@ export type RenderableFolderWorkspace = {
  */
 export function getRenderableFolderWorkspaces(
   folderWorkspaces: readonly FolderWorkspace[],
-  projectGroups: readonly ProjectGroup[]
+  projectGroups: readonly ProjectGroup[],
+  options?: {
+    activeSpaceRepoIds?: ReadonlySet<string>
+    repos: readonly Pick<Repo, 'id' | 'projectGroupId'>[]
+  }
 ): RenderableFolderWorkspace[] {
   const projectGroupsById = new Map(projectGroups.map((group) => [group.id, group]))
+  // Why: a group is "in the space" when any repo in its subtree is a member — derived, never stored.
+  const groupInSpace = (groupId: string): boolean => {
+    if (!options?.activeSpaceRepoIds) {
+      return true
+    }
+    const subtree = getProjectGroupSubtreeIds(projectGroups, groupId)
+    return options.repos.some(
+      (repo) =>
+        repo.projectGroupId &&
+        subtree.has(repo.projectGroupId) &&
+        options.activeSpaceRepoIds!.has(repo.id)
+    )
+  }
   const renderable: RenderableFolderWorkspace[] = []
   for (const folderWorkspace of folderWorkspaces) {
     const projectGroup = projectGroupsById.get(folderWorkspace.projectGroupId)
     // A group filtered out for host visibility legitimately hides its workspaces.
-    if (!projectGroup?.parentPath) {
+    if (!projectGroup?.parentPath || !groupInSpace(projectGroup.id)) {
       continue
     }
     renderable.push({ folderWorkspace, projectGroup })

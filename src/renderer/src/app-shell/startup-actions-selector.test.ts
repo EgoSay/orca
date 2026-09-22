@@ -35,7 +35,8 @@ function makeActions(): StartupActions {
     hydratePersistedUI: vi.fn(),
     setHydrationSucceeded: vi.fn(),
     pruneLastVisitedTimestamps: vi.fn(),
-    seedActiveWorktreeLastVisitedIfMissing: vi.fn()
+    seedActiveWorktreeLastVisitedIfMissing: vi.fn(),
+    loadSpaces: vi.fn()
   } as StartupActions
 }
 

@@ -94,6 +94,7 @@ export function WorktreeJumpPaletteSurface({
         model={controller.filterModel}
         filter={controller.filter}
         onFilterChange={controller.setRawFilter}
+        spaceScope={controller.spaceScope}
       />
       <CommandList
         ref={controller.listRef}

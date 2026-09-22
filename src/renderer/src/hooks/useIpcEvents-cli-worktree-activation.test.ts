@@ -108,6 +108,7 @@ describe('useIpcEvents CLI-created worktree activation', () => {
     vi.stubGlobal('window', {
       api: {
         repos: { onChanged: () => () => {} },
+        spaces: { onChanged: () => () => {} },
         automations: { onChanged: () => () => {} },
         worktrees: {
           onChanged: () => () => {},
@@ -379,6 +380,7 @@ describe('useIpcEvents CLI-created worktree activation', () => {
     vi.stubGlobal('window', {
       api: {
         repos: { onChanged: () => () => {} },
+        spaces: { onChanged: () => () => {} },
         automations: { onChanged: () => () => {} },
         worktrees: {
           onChanged: (callback: (data: { repoId: string }) => void) => {

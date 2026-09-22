@@ -97,6 +97,7 @@ export function buildWorktreeVirtualRowContext(args: BuildArgs): WorktreeVirtual
         onCreateGroupFromRepo: props.handleCreateGroupFromRepo,
         onMoveProjectToGroup: props.handleMoveProjectToGroup,
         onRemoveProjectFromGroup: props.handleRemoveProjectFromGroup,
+        onRemoveProjectFromSpace: props.handleRemoveProjectFromSpace,
         onRemoveProject: props.handleRemoveProject,
         onCreateForRepo: props.handleCreateForRepo
       },
@@ -120,6 +121,7 @@ export function buildWorktreeVirtualRowContext(args: BuildArgs): WorktreeVirtual
       worktreePointerDragRef: runtime.worktreePointerDragRef,
       nativeLineageDropTargetId: runtime.nativeLineageDropTargetId,
       activeWorktreeId: props.activeWorktreeId,
+      activeSpaceRepoIds: props.activeSpaceRepoIds,
       activeWorkspaceExecutionHostId: props.activeWorkspaceExecutionHostId,
       currentWorktreeId: props.currentWorktreeId,
       highlightedRevealRowKey: reveal.highlightedRevealRowKey,

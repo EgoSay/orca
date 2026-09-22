@@ -30,7 +30,9 @@ function makeSession(
     startX: 0,
     startY: 0,
     latestPointerY: 0,
-    promoted: true
+    latestPointerX: 0,
+    promoted: true,
+    externalTargetId: null
   }
 }
 

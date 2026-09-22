@@ -9,6 +9,7 @@ import {
 } from '@/store/selectors'
 import type { ProjectGroup } from '../../../../shared/project-group-types'
 import type { Repo } from '../../../../shared/repo-types'
+import type { SpaceDropTargetId } from './project-header-drag-contract'
 import {
   getRepoExecutionHostId,
   getSettingsFocusedExecutionHostId
@@ -19,6 +20,7 @@ import { selectWorktreeListReviewCacheInputs } from './worktree-list/listing/rev
 import type { VirtualizedScrollAnchor } from '@/hooks/useVirtualizedScrollAnchor'
 import { SidebarWorktreeListDialogs } from './worktree-list/rows/ProjectGroupDialogs'
 import { SidebarWorktreeListEmptyState } from './worktree-list/listing/EmptyState'
+import { SpaceEmptyState } from './spaces/SpaceEmptyState'
 import { VirtualizedWorktreeViewport } from './worktree-list/viewport/VirtualizedWorktreeViewport'
 import { markSidebarWorktreeActiveImmediately } from './worktree-list/rows/option-dom'
 import { EMPTY_PROJECT_GROUPS } from './worktree-list/viewport/viewport-props'
@@ -45,6 +47,8 @@ type WorktreeListProps = {
   onWorkspaceBoardDragPreviewStart?: () => void
   onWorkspaceBoardDragPreviewCommit?: () => void
   onWorkspaceBoardDragPreviewCancel?: () => void
+  onSpaceDropHoverChange?: (id: SpaceDropTargetId) => void
+  onManageSpaceMembers?: (spaceId: string) => void
 }
 
 const WorktreeList = React.memo(function WorktreeList({
@@ -53,7 +57,9 @@ const WorktreeList = React.memo(function WorktreeList({
   workspaceBoardOpen = false,
   onWorkspaceBoardDragPreviewStart = NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK,
   onWorkspaceBoardDragPreviewCommit = NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK,
-  onWorkspaceBoardDragPreviewCancel = NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK
+  onWorkspaceBoardDragPreviewCancel = NOOP_WORKSPACE_BOARD_DRAG_PREVIEW_CALLBACK,
+  onSpaceDropHoverChange,
+  onManageSpaceMembers
 }: WorktreeListProps) {
   // ── Granular selectors (each is a primitive or shallow-stable ref) ──
   const allWorktrees = useAllWorktrees()
@@ -64,6 +70,7 @@ const WorktreeList = React.memo(function WorktreeList({
   const workspaceLineageByChildKey = useAppStore((s) => s.workspaceLineageByChildKey)
   const detectedWorktreesByRepo = useAppStore((s) => s.detectedWorktreesByRepo)
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
+  const activeSpaceId = useAppStore((s) => s.activeSpaceId)
   const activeWorkspaceExecutionHostId = useAppStore((s) => s.activeWorkspaceExecutionHostId)
   const activeWorkspaceKey = useAppStore((s) => s.activeWorkspaceKey)
   const currentSidebarWorktreeId = useMemo(
@@ -255,7 +262,14 @@ const WorktreeList = React.memo(function WorktreeList({
   })
   // Why: when active filters hide every row, the Clear Filters empty state must win over Project Group headers.
   if (rowModel.rows.length === 0 || filtersHideAllRows) {
-    return <SidebarWorktreeListEmptyState hasFilters={hasFilters} onClearFilters={clearFilters} />
+    // Why spec §7: an empty space offers 「添加项目」 instead of claiming nothing
+    // exists — but a filter still owns the empty state, since Clear Filters is
+    // the only way back out of one.
+    return activeSpaceId !== null && !hasFilters && onManageSpaceMembers ? (
+      <SpaceEmptyState onManageMembers={onManageSpaceMembers} />
+    ) : (
+      <SidebarWorktreeListEmptyState hasFilters={hasFilters} onClearFilters={clearFilters} />
+    )
   }
 
   return (
@@ -286,6 +300,7 @@ const WorktreeList = React.memo(function WorktreeList({
         activeWorktreeId={
           activeView === 'tasks' || activeView === 'activity' ? null : currentSidebarWorktreeId
         }
+        activeSpaceRepoIds={filterState.activeSpaceRepoIds}
         activeWorkspaceExecutionHostId={activeWorkspaceExecutionHostId}
         currentWorktreeId={currentSidebarWorktreeId}
         groupBy={groupBy}
@@ -309,6 +324,7 @@ const WorktreeList = React.memo(function WorktreeList({
         handleCreateGroupFromRepo={projectGroupDialogs.handleCreateGroupFromRepo}
         handleMoveProjectToGroup={projectGroupDialogs.handleMoveProjectToGroup}
         handleRemoveProjectFromGroup={projectGroupDialogs.handleRemoveProjectFromGroup}
+        handleRemoveProjectFromSpace={projectGroupDialogs.handleRemoveProjectFromSpace}
         handleRenameProjectGroup={projectGroupDialogs.handleRenameProjectGroup}
         handleDeleteProjectGroup={projectGroupDialogs.handleDeleteProjectGroup}
         handleCreateFolderWorkspace={handleCreateFolderWorkspace}
@@ -348,6 +364,7 @@ const WorktreeList = React.memo(function WorktreeList({
         onWorkspaceBoardDragPreviewStart={onWorkspaceBoardDragPreviewStart}
         onWorkspaceBoardDragPreviewCommit={onWorkspaceBoardDragPreviewCommit}
         onWorkspaceBoardDragPreviewCancel={onWorkspaceBoardDragPreviewCancel}
+        onSpaceDropHoverChange={onSpaceDropHoverChange}
         shouldShowWorkspaceBoardDropIndicator={
           statusMutations.shouldShowWorkspaceBoardDropIndicator
         }

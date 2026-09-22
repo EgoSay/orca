@@ -7,10 +7,12 @@ import type { Worktree } from '../../../../shared/worktree/types'
 
 export const mockStore: { state: Record<string, unknown> } = { state: {} }
 
-export type WorktreeListComponent = React.ComponentType<{
-  scrollOffsetRef: React.RefObject<number>
-  scrollAnchorRef: React.RefObject<unknown>
-}>
+export type WorktreeListComponent = React.ComponentType<
+  {
+    scrollOffsetRef: React.RefObject<number>
+    scrollAnchorRef: React.RefObject<unknown>
+  } & Record<string, unknown>
+>
 
 let WorktreeList: WorktreeListComponent | null = null
 
@@ -19,14 +21,17 @@ export async function loadWorktreeList(): Promise<void> {
   WorktreeList = module.default as WorktreeListComponent
 }
 
-export async function renderWorktreeListMarkup(): Promise<string> {
+export async function renderWorktreeListMarkup(
+  extraProps: Record<string, unknown> = {}
+): Promise<string> {
   return renderToStaticMarkup(
     React.createElement(
       ConfirmationDialogContext.Provider,
       { value: async () => false },
       React.createElement(WorktreeList!, {
         scrollOffsetRef: { current: 0 },
-        scrollAnchorRef: { current: null }
+        scrollAnchorRef: { current: null },
+        ...extraProps
       })
     )
   )

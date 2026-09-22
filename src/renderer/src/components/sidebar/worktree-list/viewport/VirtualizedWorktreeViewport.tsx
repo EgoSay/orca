@@ -92,7 +92,8 @@ export const VirtualizedWorktreeViewport = React.memo(function VirtualizedWorktr
     onReorderHostSections: props.onReorderHostSections,
     onHostDragActiveChange: props.onHostDragActiveChange,
     suppressMeasurementAdjustmentUntilRef: scrollSuppression.suppressMeasurementAdjustmentUntilRef,
-    directScrollInputUntilRef: scrollSuppression.directScrollInputUntilRef
+    directScrollInputUntilRef: scrollSuppression.directScrollInputUntilRef,
+    onSpaceDropHoverChange: props.onSpaceDropHoverChange
   })
 
   const session = useWorktreeDragSession({ rows, scrollRef })

@@ -3,13 +3,15 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { tmpdir } from 'node:os'
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getDefaultSettings } from '../../../../shared/constants'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 
 const mocks = vi.hoisted(() => ({
   state: {} as Record<string, unknown>,
+  openPicker: null as null | (() => void),
+  setSidebarOpen: vi.fn(),
   // Stable callback identities so companion-board Effects only re-run on real state changes.
   closeWorkspaceBoard: vi.fn(),
   panel: {
@@ -59,7 +61,15 @@ vi.mock('./WorktreeList', () => ({
 }))
 
 vi.mock('./SidebarToolbar', () => ({
-  default: () => <div data-testid="sidebar-toolbar" />
+  default: ({ spaceSwitcherOpen }: { spaceSwitcherOpen: boolean }) => (
+    <div data-testid="sidebar-toolbar" data-space-switcher-open={String(spaceSwitcherOpen)} />
+  )
+}))
+
+vi.mock('./spaces/use-space-keybindings', () => ({
+  useSpaceKeybindings: ({ openPicker }: { openPicker: () => void }) => {
+    mocks.openPicker = openPicker
+  }
 }))
 
 vi.mock('./WorkspaceKanbanDrawer', () => ({
@@ -100,6 +110,12 @@ vi.mock('./useWorkspaceBoardPanel', () => ({
   })
 }))
 
+// Why: the real hook mounts SpaceCreateSheet/SpaceMemberSheet, which read
+// store.spaces — absent from this file's hand-written mocks.state.
+vi.mock('./spaces/use-space-dialogs', () => ({
+  useSpaceDialogs: () => ({ openCreate: vi.fn(), openMembers: vi.fn(), dialogs: null })
+}))
+
 import Sidebar from './index'
 
 function setSidebarState(settings: GlobalSettings, statusBarVisible = true): void {
@@ -110,6 +126,7 @@ function setSidebarState(settings: GlobalSettings, statusBarVisible = true): voi
     fetchAllWorktrees: vi.fn(),
     repos: [],
     setSidebarWidth: vi.fn(),
+    setSidebarOpen: mocks.setSidebarOpen,
     settings,
     sidebarOpen: true,
     sidebarWidth: 320,
@@ -131,6 +148,8 @@ function sidebarElement(): ReactNode {
 
 beforeEach(() => {
   mocks.closeWorkspaceBoard.mockClear()
+  mocks.setSidebarOpen.mockClear()
+  mocks.openPicker = null
   mocks.panel = {
     workspaceBoardOpen: false,
     workspaceBoardRenderedOpen: true,
@@ -242,5 +261,35 @@ describe('Sidebar', () => {
     render(sidebarElement())
 
     await waitFor(() => expect(setAgentDashboardDrawerOpen).toHaveBeenCalledWith(false))
+  })
+})
+
+describe('Sidebar space picker shortcut', () => {
+  // Why: the switcher lives in the sidebar footer. Arming the flag with the
+  // sidebar closed does nothing now and pops the menu open unbidden later.
+  it('opens the sidebar before arming the switcher', () => {
+    setSidebarState(getDefaultSettings(tmpdir()))
+    mocks.state.sidebarOpen = false
+    render(sidebarElement())
+
+    act(() => mocks.openPicker?.())
+
+    expect(mocks.setSidebarOpen).toHaveBeenCalledWith(true)
+  })
+
+  it('disarms the switcher when the sidebar closes', () => {
+    setSidebarState(getDefaultSettings(tmpdir()))
+    const { rerender, getByTestId } = render(sidebarElement())
+
+    act(() => mocks.openPicker?.())
+    rerender(sidebarElement())
+    expect(getByTestId('sidebar-toolbar').getAttribute('data-space-switcher-open')).toBe('true')
+
+    mocks.state.sidebarOpen = false
+    rerender(sidebarElement())
+    mocks.state.sidebarOpen = true
+    rerender(sidebarElement())
+
+    expect(getByTestId('sidebar-toolbar').getAttribute('data-space-switcher-open')).toBe('false')
   })
 })

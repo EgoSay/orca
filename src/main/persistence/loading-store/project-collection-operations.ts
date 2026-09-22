@@ -12,9 +12,11 @@ import type {
   ProjectUpdateArgs
 } from '../../../shared/project-types'
 import type { Repo } from '../../../shared/repo-types'
+import type { Space, SpaceUpdate } from '../../../shared/space-types'
 import { ProjectGroupPersistenceOperations } from '../tracking-repos/project-group-operations'
 import { FolderWorkspacePersistenceOperations } from '../restoring-sessions/folder-workspace-operations'
 import { ProjectHostPersistenceOperations } from '../tracking-repos/project-host-operations'
+import { SpacePersistenceOperations } from '../tracking-repos/space-operations'
 
 import type { StoreRuntimeState } from './store-runtime-state'
 import type { RepoLifecycleOperations } from './repo-lifecycle-operations'
@@ -36,6 +38,7 @@ type ProjectCollectionOperationsRuntime = Pick<
   | 'gitUsernameCache'
   | 'projectGroupOperations'
   | 'projectHostOperations'
+  | 'spaceOperations'
   | 'state'
 >
 
@@ -100,6 +103,30 @@ export class ProjectCollectionOperations {
     username: string
   ): boolean {
     return getProjectHostOperations(this).setResolvedRepoGitUsername(target, username)
+  }
+
+  getSpaces(): Space[] {
+    return getSpaceOperations(this).getSpaces()
+  }
+
+  createSpace(input: Parameters<SpacePersistenceOperations['createSpace']>[0]): Space {
+    return getSpaceOperations(this).createSpace(input)
+  }
+
+  updateSpace(spaceId: string, updates: SpaceUpdate): Space | null {
+    return getSpaceOperations(this).updateSpace(spaceId, updates)
+  }
+
+  setSpaceMembers(spaceId: string, memberIds: readonly string[]): Space | null {
+    return getSpaceOperations(this).setSpaceMembers(spaceId, memberIds)
+  }
+
+  deleteSpace(spaceId: string): boolean {
+    return getSpaceOperations(this).deleteSpace(spaceId)
+  }
+
+  reorderSpaces(orderedIds: readonly string[]): Space[] {
+    return getSpaceOperations(this).reorderSpaces(orderedIds)
   }
 
   getProjectGroups(): ProjectGroup[] {
@@ -201,6 +228,15 @@ export function getProjectGroupOperations(
         )
     })
   return owner[projectCollectionOperationsContext].runtime.projectGroupOperations
+}
+
+export function getSpaceOperations(owner: ProjectCollectionOperations): SpacePersistenceOperations {
+  owner[projectCollectionOperationsContext].runtime.spaceOperations ??=
+    new SpacePersistenceOperations({
+      state: owner[projectCollectionOperationsContext].runtime.state,
+      scheduleSave: () => scheduleSave(owner[projectCollectionOperationsContext].scheduling)
+    })
+  return owner[projectCollectionOperationsContext].runtime.spaceOperations
 }
 
 export function getFolderWorkspaceOperations(

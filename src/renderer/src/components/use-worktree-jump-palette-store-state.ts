@@ -5,6 +5,7 @@ import { useAppStore } from '@/store'
 import { useAllWorktrees } from '@/store/selectors'
 import { usePluginCommands } from '@/store/plugin-panels'
 import { useSettingsNavigationMetadata } from '@/hooks/useSettingsNavigationMetadata'
+import { selectActiveSpace } from '@/store/spaces/space-catalog'
 import {
   selectPaletteIndexStatusSnapshot,
   selectPaletteStatusInputs
@@ -34,6 +35,7 @@ export function useWorktreeJumpPaletteStoreState({
   const projectGroups = useAppStore((state) => state.projectGroups)
   const projects = useAppStore((state) => state.projects)
   const projectHostSetups = useAppStore((state) => state.projectHostSetups)
+  const activeSpace = useAppStore(selectActiveSpace)
   const detectedWorktreesByRepo = useAppStore((state) => state.detectedWorktreesByRepo)
   const pendingWorktreeCreations = useAppStore((state) => state.pendingWorktreeCreations)
   const pluginCommands = usePluginCommands()
@@ -128,6 +130,7 @@ export function useWorktreeJumpPaletteStoreState({
     projectGroups,
     projects,
     projectHostSetups,
+    activeSpace,
     detectedWorktreesByRepo,
     pendingWorktreeCreations,
     pluginCommands,

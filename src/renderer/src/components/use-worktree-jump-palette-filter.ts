@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { buildSidebarHostOptions } from '@/components/sidebar/sidebar-host-options'
 import { getProjectGroupExecutionHostIdForRows } from '@/components/sidebar/worktree-list/listing/host-filtering'
 import { buildPaletteFilterModel } from '@/components/cmd-j/palette-filter-options'
@@ -7,6 +7,11 @@ import {
   isPaletteFilterActive,
   reconcilePaletteFilter
 } from '@/components/cmd-j/palette-filter'
+import {
+  planQueryScopeFilter,
+  planSpaceSeed,
+  spaceToPaletteProjectKeys
+} from '@/components/cmd-j/palette-space-scope'
 import { getRepoHostIdentity } from '@/store/slices/repo-host-identity'
 import { getHostDisplayLabelOverrides } from '../../../shared/host-setting-overrides'
 import { getSettingsFocusedExecutionHostId } from '../../../shared/execution-host'
@@ -25,6 +30,8 @@ type WorktreeJumpPaletteFilterInput = Pick<
   | 'projects'
   | 'projectHostSetups'
   | 'projectGroups'
+  | 'activeSpace'
+  | 'visible'
 > &
   Pick<WorktreeJumpPaletteLocalState, 'rawFilter' | 'setRawFilter'>
 
@@ -39,6 +46,8 @@ export function useWorktreeJumpPaletteFilter({
   projects,
   projectHostSetups,
   projectGroups,
+  activeSpace,
+  visible,
   rawFilter,
   setRawFilter
 }: WorktreeJumpPaletteFilterInput) {
@@ -91,11 +100,55 @@ export function useWorktreeJumpPaletteFilter({
     setRawFilter((current) => reconcilePaletteFilter(current, filterModel))
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- local-state setter identity is stable across extraction.
   }, [filterModel])
+  // Why: a ref (not just [visible, activeSpaceId] deps) so a re-render after
+  // hydration — repos/projects loading in after the palette is already open —
+  // can still seed once; the ref is what actually remembers "already seeded
+  // this open," not the effect's dependency list.
+  const seededSpaceIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!visible) {
+      seededSpaceIdRef.current = null
+      return
+    }
+    const seed = planSpaceSeed({
+      activeSpace,
+      model: filterModel,
+      seededSpaceId: seededSpaceIdRef.current
+    })
+    if (!seed) {
+      return
+    }
+    seededSpaceIdRef.current = seed.spaceId
+    // Why: host chips are the user's; only the project field is space-owned.
+    setRawFilter((current) => ({ ...current, projectKeys: seed.projectKeys }))
+  }, [visible, activeSpace, filterModel, setRawFilter])
+  const spaceScope = useMemo(
+    () =>
+      activeSpace
+        ? {
+            name: activeSpace.name,
+            projectKeys: spaceToPaletteProjectKeys(activeSpace, filterModel)
+          }
+        : null,
+    [activeSpace, filterModel]
+  )
   const filterActive = isPaletteFilterActive(filter)
   const hostFilterActive = filter.hostIds.length > 0
   const filterPredicate = useMemo(
     () => buildPaletteFilterPredicate(filter, filterModel),
     [filter, filterModel]
+  )
+  /** Spec §6.3.3: what a typed query is scoped to — same object unless the space seeded it. */
+  const queryFilter = useMemo(
+    () => planQueryScopeFilter(filter, spaceScope?.projectKeys ?? null),
+    [filter, spaceScope]
+  )
+  const queryFilterPredicate = useMemo(
+    () =>
+      queryFilter === filter
+        ? filterPredicate
+        : buildPaletteFilterPredicate(queryFilter, filterModel),
+    [filter, filterModel, filterPredicate, queryFilter]
   )
   const groupHostIdByGroupId = useMemo(
     () =>
@@ -119,7 +172,9 @@ export function useWorktreeJumpPaletteFilter({
     filterActive,
     hostFilterActive,
     filterPredicate,
-    groupHostIdByGroupId
+    queryFilterPredicate,
+    groupHostIdByGroupId,
+    spaceScope
   }
 }
 

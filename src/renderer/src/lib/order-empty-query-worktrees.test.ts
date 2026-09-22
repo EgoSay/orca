@@ -125,3 +125,29 @@ describe('orderEmptyQueryWorktrees', () => {
     expect(result.visibleWorktreesForState).toHaveLength(1)
   })
 })
+
+describe('orderEmptyQueryWorktrees project grouping', () => {
+  const rows = [
+    wt({ id: 'a1', displayName: 'a1', repoId: 'repo-a', lastActivityAt: 400 }),
+    wt({ id: 'b1', displayName: 'b1', repoId: 'repo-b', lastActivityAt: 300 }),
+    wt({ id: 'a2', displayName: 'a2', repoId: 'repo-a', lastActivityAt: 200 }),
+    wt({ id: 'b2', displayName: 'b2', repoId: 'repo-b', lastActivityAt: 100 })
+  ]
+  it('leaves the flat recency order untouched without a space', () => {
+    const result = orderEmptyQueryWorktrees({
+      visibleWorktrees: rows,
+      activeWorktreeId: null,
+      lastVisitedAtByWorktreeId: {}
+    })
+    expect(result.switchableWorktreesForRows.map((w) => w.id)).toEqual(['a1', 'b1', 'a2', 'b2'])
+  })
+  it('blocks rows by project inside a space, keeping recency within each block', () => {
+    const result = orderEmptyQueryWorktrees({
+      visibleWorktrees: rows,
+      activeWorktreeId: null,
+      lastVisitedAtByWorktreeId: {},
+      groupByProject: true
+    })
+    expect(result.switchableWorktreesForRows.map((w) => w.id)).toEqual(['a1', 'a2', 'b1', 'b2'])
+  })
+})

@@ -1,3 +1,4 @@
+import { groupWorktreeItemsByProject } from '@/components/cmd-j/palette-space-scope'
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { Worktree } from '../../../shared/worktree/types'
 import { isPaletteCurrentWorktree } from './palette-repo-resolution'
@@ -10,6 +11,8 @@ export type OrderEmptyQueryInputs = {
   /** Host of the active workspace. Omit to fall back to bare-id matching (STA-4343). */
   activeWorkspaceExecutionHostId?: ExecutionHostId | null
   lastVisitedAtByWorktreeId: Record<string, number>
+  /** True only inside a Space (spec §6.3.2); 全部 keeps the flat recency order. */
+  groupByProject?: boolean
 }
 
 export type OrderEmptyQueryResult = {
@@ -30,6 +33,8 @@ export type OrderEmptyQueryResult = {
  *   1. primary: lastVisitedAtByWorktreeId[id] (focus recency)
  *   2. fallback: Worktree.lastActivityAt (for never-visited / pre-migration)
  *   3. stable tie-breaker: displayName.localeCompare
+ *   4. inside a Space only: rows are then blocked by project, each block
+ *      keeping its recency order (spec §6.3.2)
  * The current worktree is intentionally excluded from rows but kept in
  * visibleWorktreesForState so empty-state logic isn't affected.
  */
@@ -38,7 +43,8 @@ export function orderEmptyQueryWorktrees(inputs: OrderEmptyQueryInputs): OrderEm
     visibleWorktrees,
     activeWorktreeId,
     activeWorkspaceExecutionHostId,
-    lastVisitedAtByWorktreeId
+    lastVisitedAtByWorktreeId,
+    groupByProject
   } = inputs
   // Why the host too (STA-4343): `repoId::path` repeats across hosts, so filtering on the
   // bare id drops BOTH same-id rows as "current" and the other host becomes unreachable.
@@ -69,6 +75,8 @@ export function orderEmptyQueryWorktrees(inputs: OrderEmptyQueryInputs): OrderEm
   })
   return {
     visibleWorktreesForState: visibleWorktrees,
-    switchableWorktreesForRows: sorted
+    switchableWorktreesForRows: groupByProject
+      ? groupWorktreeItemsByProject(sorted, (worktree) => worktree.repoId)
+      : sorted
   }
 }

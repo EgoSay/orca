@@ -4,6 +4,8 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import type { NewWorkspaceProjectOption } from '@/lib/new-workspace-project-options'
 import { translate } from '@/i18n/i18n'
+import { useAppStore } from '@/store'
+import { selectActiveSpace, selectActiveSpaceRepoIds } from '@/store/spaces/space-catalog'
 import {
   getAmbiguousProjectOptionIds,
   rankProjectOptions,
@@ -48,6 +50,21 @@ export default function ProjectCombobox({
   describedBy
 }: ProjectComboboxProps): React.JSX.Element {
   const recentIds = useRecentProjectIds()
+  const activeSpace = useAppStore(selectActiveSpace)
+  const activeSpaceRepoIds = useAppStore(selectActiveSpaceRepoIds)
+  const projectHostSetups = useAppStore((s) => s.projectHostSetups)
+  // undefined ≡ no active space — sectionProjectOptions falls back to the plain split.
+  const spaceScope = useMemo(() => {
+    if (!activeSpace || !activeSpaceRepoIds) {
+      return undefined
+    }
+    const projectIds = new Set(
+      projectHostSetups
+        .filter((setup) => activeSpaceRepoIds.has(setup.repoId))
+        .map((setup) => setup.projectId)
+    )
+    return { name: activeSpace.name, projectIds }
+  }, [activeSpace, activeSpaceRepoIds, projectHostSetups])
   // Ranking depends on the query the hook owns, so rows are derived from it and
   // handed back; `matches`/`sections` are recomputed from the same query below.
   // Why sections, not raw rank: sectioning reorders the list (folders sink to
@@ -58,11 +75,12 @@ export default function ProjectCombobox({
       ...sectionProjectOptions(
         rankProjectOptions(options, query, recentIds),
         query,
-        recentIds
+        recentIds,
+        spaceScope
       ).flatMap((section) => section.items.map((match) => match.option.id)),
       ...(onAddProject ? [ADD_PROJECT_KEY] : [])
     ],
-    [onAddProject, options, recentIds]
+    [onAddProject, options, recentIds, spaceScope]
   )
   const {
     query,
@@ -84,8 +102,8 @@ export default function ProjectCombobox({
     [options, query, recentIds]
   )
   const sections = useMemo(
-    () => sectionProjectOptions(matches, query, recentIds),
-    [matches, query, recentIds]
+    () => sectionProjectOptions(matches, query, recentIds, spaceScope),
+    [matches, query, recentIds, spaceScope]
   )
   const ambiguous = useMemo(() => getAmbiguousProjectOptionIds(options), [options])
   const selected = options.find((option) => option.id === value) ?? null

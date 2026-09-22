@@ -17,6 +17,7 @@ import { createEditorSlice } from './slices/editor'
 import { createStatsSlice } from './slices/stats'
 import { createMemorySlice } from './slices/memory'
 import { createWorkspaceSpaceSlice } from './slices/workspace-space'
+import { createSpacesSlice } from './slices/spaces'
 import {
   createClaudeUsageSlice,
   createCodexUsageSlice,
@@ -81,6 +82,7 @@ export const useAppStore = create<AppState>()(
       ...createStatsSlice(...a),
       ...createMemorySlice(...a),
       ...createWorkspaceSpaceSlice(...a),
+      ...createSpacesSlice(...a),
       ...createClaudeUsageSlice(...a),
       ...createCodexUsageSlice(...a),
       ...createOpenCodeUsageSlice(...a),

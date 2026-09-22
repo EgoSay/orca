@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { ScrollToCurrentWorkspaceToolbarButton } from './ScrollToCurrentWorkspaceToolbarButton'
 import { SidebarSettingsHelpMenu } from './SidebarSettingsHelpMenu'
+import { SpaceSwitcher } from './spaces/SpaceSwitcher'
+import type { SpaceDropTargetId } from './project-header-drag-contract'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { hasFeatureInteraction } from '../../../../shared/feature-interactions'
@@ -16,12 +18,22 @@ type SidebarToolbarProps = {
   workspaceBoardOpen: boolean
   workspaceBoardDragPreviewOpen?: boolean
   onWorkspaceBoardToggle: () => void
+  onManageSpaceMembers: (spaceId: string) => void
+  onCreateSpace: () => void
+  spaceSwitcherOpen: boolean
+  onSpaceSwitcherOpenChange: (open: boolean) => void
+  highlightSpaceId: SpaceDropTargetId
 }
 
 const SidebarToolbar = React.memo(function SidebarToolbar({
   workspaceBoardOpen,
   workspaceBoardDragPreviewOpen = false,
-  onWorkspaceBoardToggle
+  onWorkspaceBoardToggle,
+  onManageSpaceMembers,
+  onCreateSpace,
+  spaceSwitcherOpen,
+  onSpaceSwitcherOpenChange,
+  highlightSpaceId
 }: SidebarToolbarProps) {
   // Why: this memo boundary needs its own language subscription, while
   // translate() preserves Orca's pseudo-localization behavior. Without it the
@@ -32,6 +44,8 @@ const SidebarToolbar = React.memo(function SidebarToolbar({
   const [workspaceBoardMovedHintOpen, setWorkspaceBoardMovedHintOpen] = React.useState(false)
   const movedHintEligibleRef = React.useRef<boolean | null>(null)
   const persistedUIReady = useAppStore((state) => state.persistedUIReady)
+  // Why: the web client's fallback spaces API resolves undefined, so this never flips there.
+  const spacesHydrated = useAppStore((state) => state.spacesHydrated)
   const hasUsedWorkspaceBoard = useAppStore((state) =>
     hasFeatureInteraction(state.featureInteractions, 'workspace-board')
   )
@@ -74,6 +88,15 @@ const SidebarToolbar = React.memo(function SidebarToolbar({
       <div className="flex items-center justify-between border-t border-worktree-sidebar-border px-2 py-1.5">
         <div className="flex min-w-0 items-center gap-1">
           <SidebarSettingsHelpMenu />
+          {spacesHydrated ? (
+            <SpaceSwitcher
+              onManageMembers={onManageSpaceMembers}
+              onCreateSpace={onCreateSpace}
+              open={spaceSwitcherOpen}
+              onOpenChange={onSpaceSwitcherOpenChange}
+              highlightSpaceId={highlightSpaceId}
+            />
+          ) : null}
         </div>
         <div className="flex items-center gap-1">
           <ScrollToCurrentWorkspaceToolbarButton />

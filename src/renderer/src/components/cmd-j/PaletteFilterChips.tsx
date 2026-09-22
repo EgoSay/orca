@@ -3,40 +3,62 @@ import { X } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import type { PaletteFilterModel } from './palette-filter-options'
 import {
+  clearPaletteFilterField,
   EMPTY_PALETTE_FILTER,
   isPaletteFilterActive,
   togglePaletteFilterValue,
   type PaletteFilterField,
   type PaletteFilterState
 } from './palette-filter'
+import { isSpaceScopeFilter } from './palette-space-scope'
 
-type Chip = { field: PaletteFilterField; id: string; label: string }
+type Chip = { field: PaletteFilterField; id: string; label: string; onRemove: () => void }
 
 export default function PaletteFilterChips({
   model,
   filter,
-  onFilterChange
+  onFilterChange,
+  spaceScope
 }: {
   model: PaletteFilterModel
   filter: PaletteFilterState
   onFilterChange: (next: PaletteFilterState) => void
+  spaceScope?: { name: string; projectKeys: readonly string[] } | null
 }): React.JSX.Element | null {
   const chips = useMemo<Chip[]>(() => {
     const hostLabels = new Map(model.hosts.map((host) => [host.id, host.label]))
     const projectLabels = new Map(model.projects.map((project) => [project.id, project.label]))
+    const hostChips = filter.hostIds.map((id) => ({
+      field: 'host' as const,
+      id,
+      label: hostLabels.get(id) ?? id,
+      onRemove: () => onFilterChange(togglePaletteFilterValue(filter, 'host', id))
+    }))
+    // Why: a space-seeded project selection collapses to one chip — clearing
+    // it clears the whole project field rather than toggling keys one by one.
+    if (spaceScope && isSpaceScopeFilter(filter, spaceScope.projectKeys)) {
+      return [
+        ...hostChips,
+        {
+          field: 'project' as const,
+          id: 'space-scope',
+          label: translate('worktreeJumpPalette.filter.spaceChip', 'Space: {{value0}}', {
+            value0: spaceScope.name
+          }),
+          onRemove: () => onFilterChange(clearPaletteFilterField(filter, 'project'))
+        }
+      ]
+    }
     return [
-      ...filter.hostIds.map((id) => ({
-        field: 'host' as const,
-        id,
-        label: hostLabels.get(id) ?? id
-      })),
+      ...hostChips,
       ...filter.projectKeys.map((id) => ({
         field: 'project' as const,
         id,
-        label: projectLabels.get(id) ?? id
+        label: projectLabels.get(id) ?? id,
+        onRemove: () => onFilterChange(togglePaletteFilterValue(filter, 'project', id))
       }))
     ]
-  }, [filter.hostIds, filter.projectKeys, model.hosts, model.projects])
+  }, [filter, model.hosts, model.projects, onFilterChange, spaceScope])
 
   if (!isPaletteFilterActive(filter) || chips.length === 0) {
     return null
@@ -50,7 +72,7 @@ export default function PaletteFilterChips({
           <button
             key={`${chip.field}:${chip.id}`}
             type="button"
-            onClick={() => onFilterChange(togglePaletteFilterValue(filter, chip.field, chip.id))}
+            onClick={chip.onRemove}
             aria-label={translate(
               'worktreeJumpPalette.filter.removeChip',
               'Remove filter {{value0}}',

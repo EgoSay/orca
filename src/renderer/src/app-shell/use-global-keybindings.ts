@@ -33,11 +33,11 @@ import {
 import { shortcutPlatform } from './app-window-chrome'
 import {
   createAppCommandHandlers,
-  getKeybindingContext,
   useAppShortcutActions,
   type AppShortcutState,
   type ShortcutDispatchInput
 } from './app-command-handlers'
+import { getKeybindingContext } from '@/lib/keybinding-context'
 import type { AppChromeLayout } from './use-app-chrome-layout'
 import type { FloatingWorkspacePanelState } from './use-floating-workspace-panel'
 

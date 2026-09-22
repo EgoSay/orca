@@ -86,10 +86,12 @@ export function rankProjectOptions(
 }
 
 export type ProjectOptionSection = {
-  key: 'recent' | 'projects' | 'folders' | 'results'
+  key: 'recent' | 'space' | 'projects' | 'folders' | 'results'
   heading: string | null
   items: ScoredProjectOption[]
 }
+
+export type ProjectOptionSpaceScope = { name: string; projectIds: ReadonlySet<string> }
 
 /** Below this a list is scannable, so sections are chrome rather than help. */
 const SECTION_THRESHOLD = 6
@@ -97,14 +99,38 @@ const RECENT_LIMIT = 4
 
 /**
  * While a query is live the ranking *is* the order, so sections would fight it:
- * everything collapses into one unlabelled result list.
+ * everything collapses into one unlabelled result list. A space scope is help,
+ * not chrome, so it still splits a short list — only the query-live case wins.
  */
 export function sectionProjectOptions(
   matches: readonly ScoredProjectOption[],
   query: string,
-  recentIds: readonly string[]
+  recentIds: readonly string[],
+  spaceScope?: ProjectOptionSpaceScope
 ): ProjectOptionSection[] {
-  if (query.trim() !== '' || matches.length < SECTION_THRESHOLD) {
+  if (query.trim() !== '') {
+    return [{ key: 'results', heading: null, items: [...matches] }]
+  }
+  if (spaceScope) {
+    const inSpace = (m: ScoredProjectOption): boolean =>
+      m.option.kind === 'project' && spaceScope.projectIds.has(m.option.projectId)
+    // Why: projects outside the space stay listed — hiding them reads as "my project is gone".
+    const spaceSections: ProjectOptionSection[] = [
+      { key: 'space', heading: spaceScope.name, items: matches.filter(inSpace) },
+      {
+        key: 'projects',
+        heading: 'Other projects',
+        items: matches.filter((m) => m.option.kind === 'project' && !inSpace(m))
+      },
+      {
+        key: 'folders',
+        heading: 'Folders',
+        items: matches.filter((m) => m.option.kind === 'project-group')
+      }
+    ]
+    return spaceSections.filter((section) => section.items.length > 0)
+  }
+  if (matches.length < SECTION_THRESHOLD) {
     return [{ key: 'results', heading: null, items: [...matches] }]
   }
   const recentSet = new Set(

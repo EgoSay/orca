@@ -2,17 +2,23 @@ import type { PointerEvent } from 'react'
 
 import type { ProjectHeaderDragBucketKey, ProjectHeaderDragRect } from './project-header-drop'
 import type { Repo } from '../../../../shared/repo-types'
+import { SPACE_SWITCHER_DROP_TARGET } from './spaces/space-drop-target'
+
+/** SPACE_SWITCHER_DROP_TARGET = the trigger; a space id = a menu item; null = not over any target. */
+export type SpaceDropTargetId = string | null
 
 export type RepoDragState = {
   draggingRepoId: string | null
   dropIndex: number | null
   dropIndicatorY: number | null
+  hoverSpaceTargetId: SpaceDropTargetId
 }
 
 export const INITIAL_REPO_DRAG_STATE: RepoDragState = {
   draggingRepoId: null,
   dropIndex: null,
-  dropIndicatorY: null
+  dropIndicatorY: null,
+  hoverSpaceTargetId: null
 }
 
 export type UseRepoHeaderDragArgs = {
@@ -23,6 +29,7 @@ export type UseRepoHeaderDragArgs = {
   onCommitRepoOrder: (orderedIds: string[]) => void
   onCommitProjectGroupOrder: (repoId: string, projectGroupId: string | null, order: number) => void
   getScrollContainer: () => HTMLElement | null
+  onDropOnSpace?: (repoId: string, spaceId: string) => void
 }
 
 export type RepoHeaderDragController = {
@@ -40,7 +47,43 @@ export type ProjectHeaderDragSession = {
   startX: number
   startY: number
   latestPointerY: number
+  latestPointerX: number
   promoted: boolean
+  externalTargetId: SpaceDropTargetId
+}
+
+/** A quiescent drag state: no sidebar reorder in progress, only the space hover (if any). */
+export function idleRepoDragState(
+  repoId: string,
+  hoverSpaceTargetId: SpaceDropTargetId
+): RepoDragState {
+  return { draggingRepoId: repoId, dropIndex: null, dropIndicatorY: null, hoverSpaceTargetId }
+}
+
+export type EndDragOutcome =
+  | { kind: 'space'; spaceId: string }
+  | { kind: 'reorder'; sidebarDropIndex: number }
+  | { kind: 'none' }
+
+export function resolveEndDragOutcome(
+  session: ProjectHeaderDragSession,
+  commit: boolean,
+  latestDropIndex: number | null
+): EndDragOutcome {
+  if (!commit || !session.promoted) {
+    return { kind: 'none' }
+  }
+  // Why: any external target (the trigger included) preempts reorder — only a real
+  // space id lands; the trigger is a no-op rather than falling through to a stale index.
+  if (session.externalTargetId !== null) {
+    return session.externalTargetId === SPACE_SWITCHER_DROP_TARGET
+      ? { kind: 'none' }
+      : { kind: 'space', spaceId: session.externalTargetId }
+  }
+  if (latestDropIndex !== null) {
+    return { kind: 'reorder', sidebarDropIndex: latestDropIndex }
+  }
+  return { kind: 'none' }
 }
 
 export const PROJECT_HEADER_DRAG_THRESHOLD_PX = 4

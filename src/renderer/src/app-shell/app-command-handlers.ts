@@ -69,12 +69,6 @@ export function useAppShortcutActions() {
   )
 }
 
-export function getKeybindingContext(target: EventTarget | null): KeybindingContext {
-  return target instanceof HTMLElement && target.classList.contains('xterm-helper-textarea')
-    ? 'terminal'
-    : 'app'
-}
-
 /**
  * Builds the app-level handlers for every keybindable action. Each returns whether it claimed
  * the chord, so an unavailable surface (settings view, closed floating panel) falls through to

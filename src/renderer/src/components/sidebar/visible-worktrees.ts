@@ -34,10 +34,6 @@ import {
   type ExecutionHostScope
 } from '../../../../shared/execution-host'
 import {
-  getCyclicProjectedWorktreeLineageIds,
-  getLineageRenderInfo
-} from './worktree-lineage-projection'
-import {
   computeRenderedSidebarWorktreeOrder,
   computeRenderedSidebarWorktrees
 } from './rendered-sidebar-worktree-order'
@@ -48,7 +44,8 @@ import {
 } from './workspace-creator-visibility'
 import { isDefaultBranchWorkspace } from './default-branch-workspace'
 import { getLineageAncestorIndex, getSortedWorktreeRankIndex } from './visible-worktree-indexes'
-import { getWorktreeHostIdentity } from '../../../../shared/worktree/host-qualified-identity'
+import { addVisibleLineageAncestors } from './visible-worktree-lineage-ancestors'
+import { selectActiveSpaceRepoIds } from '@/store/spaces/space-catalog'
 
 /**
  * Whether the "Hide sleeping" sweep must keep this row (#8873).
@@ -83,6 +80,8 @@ type VisibleWorktreeOptions = {
   worktreeLineageById: Record<string, WorktreeLineage>
   injectLineageAncestors?: boolean
   forcedVisibleWorktreeIds?: readonly string[]
+  /** Repo ids of the active Space's members; undefined ≡ 全部 (no filter). */
+  activeSpaceRepoIds?: ReadonlySet<string>
 }
 
 export function computeVisibleWorktrees(
@@ -136,6 +135,12 @@ export function computeVisibleWorktrees(
     })
   }
 
+  // Why: symmetric with the host filter above — presence, not a mode flag.
+  if (opts.activeSpaceRepoIds) {
+    const spaceRepoIds = opts.activeSpaceRepoIds
+    all = all.filter((w) => spaceRepoIds.has(w.repoId))
+  }
+
   // Filter by repo
   if (opts.filterRepoIds.length > 0) {
     const selectedRepoIds = new Set(opts.filterRepoIds)
@@ -181,41 +186,6 @@ export function computeVisibleWorktrees(
   return opts.injectLineageAncestors === false
     ? all
     : addVisibleLineageAncestors(all, lineageAncestorById, opts.worktreeLineageById)
-}
-
-function addVisibleLineageAncestors(
-  worktrees: Worktree[],
-  worktreeById: Map<string, Worktree>,
-  lineageById: Record<string, WorktreeLineage>
-): Worktree[] {
-  const result: Worktree[] = []
-  const included = new Set<string>()
-  const visiting = new Set<string>()
-  const cyclicLineageIds = getCyclicProjectedWorktreeLineageIds(lineageById, worktreeById)
-
-  const addWithAncestors = (worktree: Worktree): void => {
-    const identity = getWorktreeHostIdentity(worktree)
-    if (included.has(identity) || visiting.has(identity)) {
-      return
-    }
-    visiting.add(identity)
-    const lineage = getLineageRenderInfo(worktree, lineageById, worktreeById, cyclicLineageIds)
-    if (lineage.state === 'valid') {
-      // Why: sidebar lineage is structural. If a filtered child is visible,
-      // its valid parent must be rendered too so the hierarchy remains legible.
-      addWithAncestors(lineage.parent)
-    }
-    visiting.delete(identity)
-    if (!included.has(identity)) {
-      included.add(identity)
-      result.push(worktree)
-    }
-  }
-
-  for (const worktree of worktrees) {
-    addWithAncestors(worktree)
-  }
-  return result
 }
 
 export function computeVisibleWorktreeIds(
@@ -297,7 +267,8 @@ export function buildVisibleWorktreeOptionsFromState(
     workspaceHostScope: state.workspaceHostScope,
     visibleWorkspaceHostIds: state.visibleWorkspaceHostIds,
     defaultHostId: getSettingsFocusedExecutionHostId(state.settings),
-    worktreeLineageById: state.worktreeLineageById
+    worktreeLineageById: state.worktreeLineageById,
+    activeSpaceRepoIds: selectActiveSpaceRepoIds(state)
   }
 }
 

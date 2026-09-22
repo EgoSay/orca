@@ -6,17 +6,21 @@ import {
 } from './project-header-drop'
 import { commitProjectHeaderDragDrop } from './project-header-drag-commit'
 import {
+  idleRepoDragState,
   INITIAL_REPO_DRAG_STATE,
   PROJECT_HEADER_DRAG_THRESHOLD_PX,
+  resolveEndDragOutcome,
   type ProjectHeaderDragSession,
   type RepoDragState,
   type RepoHeaderDragController,
+  type SpaceDropTargetId,
   type UseRepoHeaderDragArgs
 } from './project-header-drag-contract'
 import { createProjectHeaderDragSession } from './project-header-drag-start'
-import { getWorktreeSidebarDragAutoscroll } from './worktree-sidebar-drag-autoscroll'
+import { useRepoHeaderDragAutoscroll } from './project-header-drag-autoscroll'
 import { hasPointerBeenReleased } from './header-drag-pointer-release'
 import { swallowNextClickOnDragHandle } from './header-drag-click-swallow'
+import { findSpaceDropTarget } from './spaces/space-drop-target'
 
 // Why pointer events instead of HTML5 DnD: rows are absolutely-positioned by
 // react-virtual and unmount/remount as scroll changes, so DnD enter/leave fire
@@ -30,7 +34,8 @@ export function useRepoHeaderDrag({
   usesProjectGroupOrdering,
   onCommitRepoOrder,
   onCommitProjectGroupOrder,
-  getScrollContainer
+  getScrollContainer,
+  onDropOnSpace
 }: UseRepoHeaderDragArgs): RepoHeaderDragController {
   const [state, setState] = useState<RepoDragState>(INITIAL_REPO_DRAG_STATE)
   const [sessionArmed, setSessionArmed] = useState(false)
@@ -48,10 +53,10 @@ export function useRepoHeaderDrag({
   onCommitRepoOrderRef.current = onCommitRepoOrder
   const onCommitProjectGroupOrderRef = useRef(onCommitProjectGroupOrder)
   onCommitProjectGroupOrderRef.current = onCommitProjectGroupOrder
+  const onDropOnSpaceRef = useRef(onDropOnSpace)
+  onDropOnSpaceRef.current = onDropOnSpace
   const getContainerRef = useRef(getScrollContainer)
   getContainerRef.current = getScrollContainer
-  const autoscrollLastFrameTimeRef = useRef<number | null>(null)
-  const autoscrollFrameIdRef = useRef<number | null>(null)
 
   const dragSessionRef = useRef<ProjectHeaderDragSession | null>(null)
   const clickSwallowTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -87,15 +92,20 @@ export function useRepoHeaderDrag({
   )
 
   const applyDrop = useCallback(
-    (repoId: string, drop: { dropIndex: number; dropIndicatorY: number } | null) => {
+    (
+      repoId: string,
+      drop: { dropIndex: number; dropIndicatorY: number } | null,
+      hoverSpaceTargetId: SpaceDropTargetId = null
+    ) => {
       latestDropIndexRef.current = drop?.dropIndex ?? null
       const nextState: RepoDragState = drop
-        ? { draggingRepoId: repoId, ...drop }
-        : { draggingRepoId: repoId, dropIndex: null, dropIndicatorY: null }
+        ? { draggingRepoId: repoId, hoverSpaceTargetId, ...drop }
+        : idleRepoDragState(repoId, hoverSpaceTargetId)
       setState((prev) =>
         prev.draggingRepoId === nextState.draggingRepoId &&
         prev.dropIndex === nextState.dropIndex &&
-        prev.dropIndicatorY === nextState.dropIndicatorY
+        prev.dropIndicatorY === nextState.dropIndicatorY &&
+        prev.hoverSpaceTargetId === nextState.hoverSpaceTargetId
           ? prev
           : nextState
       )
@@ -103,13 +113,13 @@ export function useRepoHeaderDrag({
     []
   )
 
-  const cancelAutoscroll = useCallback(() => {
-    if (autoscrollFrameIdRef.current !== null) {
-      window.cancelAnimationFrame(autoscrollFrameIdRef.current)
-      autoscrollFrameIdRef.current = null
-    }
-    autoscrollLastFrameTimeRef.current = null
-  }, [])
+  const { ensureAutoscroll, cancelAutoscroll } = useRepoHeaderDragAutoscroll({
+    dragSessionRef,
+    getContainerRef,
+    refreshHeaderRects,
+    applyDrop,
+    computeDrop
+  })
 
   const endDrag = useCallback(
     (commit: boolean) => {
@@ -128,69 +138,28 @@ export function useRepoHeaderDrag({
       if (session.promoted) {
         clickSwallowTimeoutRef.current = swallowNextClickOnDragHandle(session.handleEl)
       }
-      const sidebarDropIndex =
-        commit && session.promoted && latestDropIndexRef.current !== null
-          ? latestDropIndexRef.current
-          : null
+      const outcome = resolveEndDragOutcome(session, commit, latestDropIndexRef.current)
       dragSessionRef.current = null
       setState(INITIAL_REPO_DRAG_STATE)
       setSessionArmed(false)
-      if (sidebarDropIndex === null) {
+      if (outcome.kind === 'reorder') {
+        commitProjectHeaderDragDrop({
+          session,
+          sidebarDropIndex: outcome.sidebarDropIndex,
+          orderedRepoIds: orderedIdsRef.current,
+          repoById: repoByIdRef.current,
+          usesProjectGroupOrdering: usesProjectGroupOrderingRef.current,
+          onCommitRepoOrder: onCommitRepoOrderRef.current,
+          onCommitProjectGroupOrder: onCommitProjectGroupOrderRef.current
+        })
         return
       }
-
-      commitProjectHeaderDragDrop({
-        session,
-        sidebarDropIndex,
-        orderedRepoIds: orderedIdsRef.current,
-        repoById: repoByIdRef.current,
-        usesProjectGroupOrdering: usesProjectGroupOrderingRef.current,
-        onCommitRepoOrder: onCommitRepoOrderRef.current,
-        onCommitProjectGroupOrder: onCommitProjectGroupOrderRef.current
-      })
+      if (outcome.kind === 'space') {
+        onDropOnSpaceRef.current?.(session.repoId, outcome.spaceId)
+      }
     },
     [cancelAutoscroll]
   )
-
-  const runAutoscrollFrame = useCallback(
-    (frameTime: number) => {
-      autoscrollFrameIdRef.current = null
-      const session = dragSessionRef.current
-      const container = getContainerRef.current()
-      if (!session?.promoted || !container) {
-        cancelAutoscroll()
-        return
-      }
-
-      const previousFrameTime = autoscrollLastFrameTimeRef.current ?? frameTime
-      autoscrollLastFrameTimeRef.current = frameTime
-      const autoscroll = getWorktreeSidebarDragAutoscroll({
-        point: { clientX: 0, clientY: session.latestPointerY },
-        containerRect: container.getBoundingClientRect(),
-        scrollTop: container.scrollTop,
-        scrollHeight: container.scrollHeight,
-        clientHeight: container.clientHeight,
-        elapsedMs: frameTime - previousFrameTime
-      })
-      if (autoscroll) {
-        container.scrollTop = autoscroll.scrollTop
-        refreshHeaderRects()
-      }
-
-      applyDrop(session.repoId, computeDrop(session.latestPointerY))
-
-      autoscrollFrameIdRef.current = window.requestAnimationFrame(runAutoscrollFrame)
-    },
-    [applyDrop, cancelAutoscroll, computeDrop, refreshHeaderRects]
-  )
-
-  const ensureAutoscroll = useCallback(() => {
-    if (autoscrollFrameIdRef.current !== null) {
-      return
-    }
-    autoscrollLastFrameTimeRef.current = null
-    autoscrollFrameIdRef.current = window.requestAnimationFrame(runAutoscrollFrame)
-  }, [runAutoscrollFrame])
 
   useEffect(() => {
     if (!sessionArmed) {
@@ -206,6 +175,7 @@ export function useRepoHeaderDrag({
         return
       }
       session.latestPointerY = e.clientY
+      session.latestPointerX = e.clientX
       if (!session.promoted) {
         const dx = e.clientX - session.startX
         const dy = e.clientY - session.startY
@@ -226,10 +196,19 @@ export function useRepoHeaderDrag({
             // Ignore capture failure; global listeners will handle the drag.
           }
         }
-        refreshHeaderRects()
-        setState({ draggingRepoId: session.repoId, dropIndex: null, dropIndicatorY: null })
       }
+      // Why: session.promoted is always true here — the branch above returns early otherwise.
+      // The tail below (applyDrop or the space branch) sets draggingRepoId, so no interim setState.
       refreshHeaderRects()
+      session.externalTargetId = findSpaceDropTarget(document, e.clientX, e.clientY)
+      if (session.externalTargetId !== null) {
+        // Why: over the toolbar the reorder indicator and autoscroll both go quiet — geometric
+        // intent. Routed through applyDrop so its equality gate skips the setState when the
+        // hovered target hasn't changed since the last pointermove (a stationary hover is common).
+        applyDrop(session.repoId, null, session.externalTargetId)
+        cancelAutoscroll()
+        return
+      }
       applyDrop(session.repoId, computeDrop(e.clientY))
       ensureAutoscroll()
     }

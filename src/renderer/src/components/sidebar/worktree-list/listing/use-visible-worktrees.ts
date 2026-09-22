@@ -44,9 +44,11 @@ export function useVisibleSidebarWorktrees(args: {
     hideWorkspacesFromOtherDevices,
     alwaysShowDefaultBranchWorkspace,
     visibleWorkspaceHostIds,
-    workspaceHostScope
+    workspaceHostScope,
+    activeSpaceRepoIds
   } = filterState
   const worktreesByRepo = useAppStore((s) => s.worktreesByRepo)
+  const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
   const agentStatusEpoch = useAppStore((s) => (!showSleepingWorkspaces ? s.agentStatusEpoch : 0))
   // Why: skip the clock entirely when the epoch is the opt-out sentinel, so a
   // sleeping-workspaces list cannot evict the sample the live lists share.
@@ -101,12 +103,19 @@ export function useVisibleSidebarWorktrees(args: {
       visibleWorkspaceHostIds,
       defaultHostId,
       worktreeLineageById,
-      forcedVisibleWorktreeIds: args.agentSendTargetWorktreeId
-        ? [args.agentSendTargetWorktreeId]
-        : undefined
+      activeSpaceRepoIds,
+      // Why spec §5: the guest row is a Space escape valve, so the active
+      // workspace is only forced visible under a space. Legacy filters (repo,
+      // host, sleeping, default-branch) keep their pre-Space semantics, and the
+      // Guest badge only renders under a space anyway.
+      forcedVisibleWorktreeIds: [
+        args.agentSendTargetWorktreeId,
+        activeSpaceRepoIds === undefined ? null : activeWorktreeId
+      ].filter((id): id is string => typeof id === 'string')
     })
   }, [
     args.agentSendTargetWorktreeId,
+    activeWorktreeId,
     agentStatusEpoch,
     agentStatusNow,
     filterRepoIds,
@@ -127,7 +136,8 @@ export function useVisibleSidebarWorktrees(args: {
     sortedIds,
     worktreeLineageById,
     worktreesByRepo,
-    pairedDeviceIdsByEnvironment
+    pairedDeviceIdsByEnvironment,
+    activeSpaceRepoIds
   ])
   // Why: agentStatusEpoch bumps recompute this memo even when membership and
   // order are unchanged; keeping the previous identity stops the whole
