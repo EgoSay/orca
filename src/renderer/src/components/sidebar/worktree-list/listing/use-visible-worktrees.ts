@@ -9,7 +9,7 @@ import { computeVisibleWorktrees } from '../../visible-worktrees'
 import {
   EMPTY_PAIRED_DEVICE_IDS_BY_ENVIRONMENT,
   getPairedDeviceIdsByEnvironment
-} from '../../workspace-creator-visibility'
+} from '../../../../../../shared/workspace-creator-visibility'
 import {
   getVisibleWorktreeBrowserActivityTabs,
   getVisibleWorktreeTerminalActivityTabs,
@@ -108,6 +108,7 @@ export function useVisibleSidebarWorktrees(args: {
       visibleWorkspaceHostIds,
       defaultHostId,
       worktreeLineageById,
+      preserveLineageParentOrder: sortBy === 'manual',
       activeSpaceRepoIds,
       // Why spec §5: the guest row is a Space escape valve, so the active
       // workspace is only forced visible under a space. Legacy filters (repo,
@@ -139,6 +140,7 @@ export function useVisibleSidebarWorktrees(args: {
     ptyIdsByTabId,
     browserTabsByWorktree,
     sortedIds,
+    sortBy,
     worktreeLineageById,
     worktreesByRepo,
     pairedDeviceIdsByEnvironment,

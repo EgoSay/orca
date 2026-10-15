@@ -8,6 +8,7 @@ import {
 } from '@/components/cmd-j/palette-filter'
 import { planQueryScopeFilter } from '@/components/cmd-j/palette-space-scope'
 import { getRepoHostIdentity } from '@/store/slices/repo-host-identity'
+import { getPaletteWorktreeExecutionHostId } from '@/lib/palette-repo-resolution'
 import { getHostDisplayLabelOverrides } from '../../../shared/host-setting-overrides'
 import { getSettingsFocusedExecutionHostId } from '../../../shared/execution-host'
 import type { WorktreeJumpPaletteLocalState } from './use-worktree-jump-palette-local-state'
@@ -21,7 +22,7 @@ type WorktreeJumpPaletteFilterInput = Pick<
   | 'sshConnectionStates'
   | 'runtimeEnvironments'
   | 'runtimeStatusByEnvironmentId'
-  | 'allWorktrees'
+  | 'workspaces'
   | 'projects'
   | 'projectHostSetups'
   | 'projectGroups'
@@ -37,7 +38,7 @@ export function useWorktreeJumpPaletteFilter({
   sshConnectionStates,
   runtimeEnvironments,
   runtimeStatusByEnvironmentId,
-  allWorktrees,
+  workspaces,
   projects,
   projectHostSetups,
   projectGroups,
@@ -54,7 +55,12 @@ export function useWorktreeJumpPaletteFilter({
   const hostOptions = useMemo(
     () =>
       buildSidebarHostOptions({
-        repos,
+        repos: [
+          ...repos,
+          ...workspaces.map((workspace) => ({
+            executionHostId: getPaletteWorktreeExecutionHostId(workspace)
+          }))
+        ],
         sshTargetLabels,
         sshConnectionStates,
         settings,
@@ -64,6 +70,7 @@ export function useWorktreeJumpPaletteFilter({
       }),
     [
       repos,
+      workspaces,
       sshTargetLabels,
       sshConnectionStates,
       settings,
@@ -78,13 +85,13 @@ export function useWorktreeJumpPaletteFilter({
     () =>
       buildPaletteFilterModel({
         repos,
-        worktrees: allWorktrees,
+        worktrees: workspaces,
         hostOptions,
         projects,
         projectHostSetups,
         defaultHostId
       }),
-    [allWorktrees, defaultHostId, hostOptions, projectHostSetups, projects, repos]
+    [workspaces, defaultHostId, hostOptions, projectHostSetups, projects, repos]
   )
   /** Spec §6.3: the active space as a repository scope; null outside a space or before hydration. */
   const spaceScope = useMemo(

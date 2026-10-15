@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 sidebar/visible-worktrees、sidebar/default-branch-workspace、sidebar/workspace-creator-visibility 的可见性谓词，lib/worktree-activity-state 的 isInactiveWorkspace，./palette-filter 的 PaletteFilterPredicate
+ * [INPUT]: 依赖 shared 的工作区类型与归属谓词、sidebar 的休眠豁免、lib 的活跃状态及 palette-filter
  * [OUTPUT]: 对外提供 buildEmptyQueryWorktreeVisibility
  * [POS]: ⌘J 空查询行的可见性谓词；从 use-worktree-jump-palette-worktrees 抽出，与侧边栏共用同一套隐藏开关
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -10,14 +10,17 @@ import {
   isDetachedHeadWorkspace,
   isSleepingSweepExemptWorkspace
 } from '@/components/sidebar/visible-worktrees'
-import { isDefaultBranchWorkspace } from '@/components/sidebar/default-branch-workspace'
-import { isWorkspaceFromOtherDevice } from '@/components/sidebar/workspace-creator-visibility'
+import { isDefaultBranchWorkspace } from '../../../../shared/worktree/workspace-kinds'
+import { isWorkspaceOwnedBySomeoneElse } from '../../../../shared/workspace-creator-visibility'
+import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
+import type { Repo } from '../../../../shared/repo-types'
 import { isInactiveWorkspace } from '@/lib/worktree-activity-state'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { PaletteFilterPredicate } from './palette-filter'
 
 export type EmptyQueryWorktreeVisibilityInput = {
   filterPredicate: PaletteFilterPredicate | null
+  repoMap: ReadonlyMap<string, Repo>
   hideDefaultBranchWorkspace: boolean
   hideAutomationGeneratedWorkspaces: boolean
   hideCliCreatedWorkspaces: boolean
@@ -44,7 +47,19 @@ export function buildEmptyQueryWorktreeVisibility(
     if (input.filterPredicate && !input.filterPredicate.matchesWorktree(worktree)) {
       return false
     }
-    if (input.hideDefaultBranchWorkspace && isDefaultBranchWorkspace(worktree)) {
+    if (
+      input.hideWorkspacesFromOtherDevices &&
+      isWorkspaceOwnedBySomeoneElse(worktree, input.pairedDeviceIdsByEnvironment)
+    ) {
+      return false
+    }
+    if (parseWorkspaceKey(worktree.id)?.type === 'folder') {
+      return true
+    }
+    if (
+      input.hideDefaultBranchWorkspace &&
+      isDefaultBranchWorkspace(worktree, input.repoMap.get(worktree.repoId))
+    ) {
       return false
     }
     if (input.hideAutomationGeneratedWorkspaces && isAutomationGeneratedWorkspace(worktree)) {
@@ -54,12 +69,6 @@ export function buildEmptyQueryWorktreeVisibility(
       return false
     }
     if (input.hideDetachedHeadWorkspaces && isDetachedHeadWorkspace(worktree)) {
-      return false
-    }
-    if (
-      input.hideWorkspacesFromOtherDevices &&
-      isWorkspaceFromOtherDevice(worktree, input.pairedDeviceIdsByEnvironment)
-    ) {
       return false
     }
     return (

@@ -41,26 +41,84 @@ function implementsGrant(name: string): boolean {
   return MOBILE_WEB_SHELL_GRANTS.some((grant) => grant === name)
 }
 
+/** A pattern segment expo-router would read as dynamic: `[hostId]`, and `[...page]` with it. */
+function isDynamicSegment(segment: string): boolean {
+  return segment.startsWith('[') && segment.endsWith(']')
+}
+
+/**
+ * expo-router's rest segment, which stands for a path rather than a segment.
+ *
+ * Read the way `matchers.js` reads it at expo-router 55.0.18: the brackets come off and the name
+ * left behind starts with `...`.
+ */
+function isRestSegment(segment: string): boolean {
+  return isDynamicSegment(segment) && segment.slice(1, -1).startsWith('...')
+}
+
+/** Why this matcher will not read a pattern. A refused pattern matches nothing. */
+export const ROUTE_PATTERN_REFUSALS = ['rest-segment-not-last', 'rest-segments-repeated'] as const
+
+export type RoutePatternRefusal = (typeof ROUTE_PATTERN_REFUSALS)[number]
+
+/**
+ * Whether a manifest pattern is one this matcher can read, and what is wrong with it if not.
+ *
+ * One rest segment, trailing, is the shape expo-router's own file system can produce and the only
+ * one this reads. Anything else is refused by name and matches nothing, so its route stays native
+ * — the same answer a phone too old to have heard of rest segments gives, and the answer a shell
+ * should give for a pattern whose tail it cannot say it understood.
+ *
+ * Narrower than expo-router on purpose, and the one place the two differ: its own matcher does
+ * take a non-trailing rest, `h/*page/tail` matching `/h/a/b/tail` at 55.0.18. This refuses it
+ * rather than copying a shape nothing produces and this shell cannot reason about.
+ */
+export function routePatternRefusal(pattern: string): RoutePatternRefusal | null {
+  const segments = pattern.split('/')
+  const rest = segments.flatMap((segment, index) => (isRestSegment(segment) ? [index] : []))
+  if (rest.length > 1) {
+    return 'rest-segments-repeated'
+  }
+  return rest[0] !== undefined && rest[0] !== segments.length - 1 ? 'rest-segment-not-last' : null
+}
+
 /**
  * Whether a concrete route is the one a pattern names.
  *
  * Segment by segment, because a dynamic segment matches one segment and never a path: `/h/[hostId]`
  * is the worktree list and `/h/a/session/b` is a different screen that starts with the same two
  * segments. A pattern segment in brackets matches any non-empty segment; everything else is exact.
+ *
+ * A trailing `[...page]` is the exception and matches one segment or many, never none. Nothing on
+ * the desktop declares one today; a desktop that ships a catch-all screen later writes such a
+ * pattern into its manifest, and a phone already in the store has to read it. One or more and not
+ * zero is expo-router's own answer at 55.0.18: `getReactNavigationConfig.js` turns `[...page]` into
+ * the path part `*page`, `fork/getStateFromPath-forks.js` turns that into `((.*\/))`, and
+ * `cleanPath` beside it gives every path a trailing slash — so the tail must hold a slash of its
+ * own, and the prefix the pattern sits on is a different screen.
  */
 export function matchesRoutePattern(pathname: string, pattern: string): boolean {
-  const actual = pathname.split('/')
-  const expected = pattern.split('/')
-  if (actual.length !== expected.length) {
+  if (routePatternRefusal(pattern) !== null) {
     return false
   }
-  return expected.every((segment, index) => {
-    const value = actual[index]
-    if (value === undefined) {
-      return false
-    }
-    return segment.startsWith('[') && segment.endsWith(']') ? value.length > 0 : segment === value
-  })
+  const actual = pathname.split('/')
+  const expected = pattern.split('/')
+  const fixed = isRestSegment(expected[expected.length - 1] ?? '')
+    ? expected.length - 1
+    : expected.length
+  // Exact where the pattern is all segments, and at least one tail segment where it ends in a rest.
+  if (fixed === expected.length ? actual.length !== fixed : actual.length <= fixed) {
+    return false
+  }
+  return (
+    expected.slice(0, fixed).every((segment, index) => {
+      const value = actual[index]
+      if (value === undefined) {
+        return false
+      }
+      return isDynamicSegment(segment) ? value.length > 0 : segment === value
+    }) && actual.slice(fixed).every((value) => value.length > 0)
+  )
 }
 
 /**
@@ -128,7 +186,12 @@ export function grantsForRoute(
   routes: readonly MobileWebPageRoute[] | undefined,
   pathname: string
 ): string[] {
-  const declared = (routes ?? []).find((route) => matchesRoutePattern(pathname, route.pathname))
+  const matching = (routes ?? []).filter((route) => matchesRoutePattern(pathname, route.pathname))
+  // A rest pattern covers every pathname under its prefix, so a desktop that declares both lands
+  // two entries on one pathname. The exact one is what named this screen; taking the rest route's
+  // list instead would hand a screen with its own row whatever the catch-all asked for.
+  const declared =
+    matching.find((route) => !route.pathname.split('/').some(isRestSegment)) ?? matching[0]
   return declared === undefined ? [] : effectiveRouteGrants(declared)
 }
 
@@ -150,14 +213,76 @@ export function grantsForRoute(
  * covered by what this session holds. A pair naming the required lane alone would keep a hop whose
  * target then runs without the capability it asked for, which is the drift that rule exists against.
  */
-export function routeViewOf(routes: readonly MobileWebPageRoute[] | undefined, pathname: string) {
+export function routeViewOf(
+  routes: readonly MobileWebPageRoute[] | undefined,
+  pathname: string,
+  wide = false
+) {
   const entries = implementedPageRouteEntries(routes)
+  const root = hostAreaRoot(pathname)
+  // Native unless the page declares it: an older page draws its own sidebar beside the native one.
+  if (wide && (root === null || !pageCanOwnHostArea(entries, root))) {
+    return { pageRoutes: [], pageRouteGrants: [], routeGrants: [], ownsHostArea: false }
+  }
+  const ownsHostArea = wide && pathname === root
+  // No pair for the host route in a wide detail session, so a hop there goes to the shell, which
+  // opens it owning the area rather than as a second host list in this pane.
+  const paired =
+    wide && !ownsHostArea && root !== null
+      ? entries.filter((route) => !matchesRoutePattern(root, route.pathname))
+      : entries
   return {
     pageRoutes: entries.map((route) => route.pathname),
-    pageRouteGrants: entries.map((route) => ({
+    pageRouteGrants: paired.map((route) => ({
       pathname: route.pathname,
       grants: effectiveRouteGrants(route)
     })),
-    routeGrants: grantsForRoute(routes, pathname)
+    routeGrants: ownsHostArea ? hostAreaGrants(entries) : grantsForRoute(routes, pathname),
+    ownsHostArea
   }
+}
+
+type RouteViewFacts = {
+  readonly pageRoutes: readonly string[]
+  readonly pageRouteGrants: readonly { readonly pathname: string }[]
+  readonly routeGrants: readonly string[]
+  readonly ownsHostArea: boolean
+}
+
+/** Whether two views serve the same routes with the same grants and the same host-area answer.
+ *  The paired routes count too: a wide detail session has no host-route pair to hop in-page on. */
+export function sameRouteView(a: RouteViewFacts, b: RouteViewFacts): boolean {
+  const same = (x: readonly string[], y: readonly string[]) =>
+    x.length === y.length && x.every((item, index) => item === y[index])
+  const paired = (view: RouteViewFacts) => view.pageRouteGrants.map((pair) => pair.pathname)
+  return (
+    a.ownsHostArea === b.ownsHostArea &&
+    same(a.pageRoutes, b.pageRoutes) &&
+    same(paired(a), paired(b)) &&
+    same(a.routeGrants, b.routeGrants)
+  )
+}
+
+/** Whether `href` is this host's own host route, whatever its search. */
+export function isHostRouteOf(href: string, hostId: string): boolean {
+  const [path] = href.split(/[?#]/)
+  return path === `/h/${hostId}` || path === `/h/${encodeURIComponent(hostId)}`
+}
+
+/** The `/h/<host>` route a pathname sits under, or null outside a host. */
+function hostAreaRoot(pathname: string): string | null {
+  const [empty, h, host] = pathname.split('/')
+  return empty === '' && h === 'h' && host !== undefined && host !== '' ? `/h/${host}` : null
+}
+
+function pageCanOwnHostArea(entries: readonly MobileWebPageRoute[], root: string): boolean {
+  return entries.some(
+    (route) => route.canOwnHostArea === true && matchesRoutePattern(root, route.pathname)
+  )
+}
+
+/** Every served route's grants, so `route-handoff.web.ts` keeps each hop in the page, plus the read
+ *  of a workspace key that page opens in-page. */
+function hostAreaGrants(entries: readonly MobileWebPageRoute[]): string[] {
+  return [...new Set([...entries.flatMap(effectiveRouteGrants), 'native.storage.read'])]
 }

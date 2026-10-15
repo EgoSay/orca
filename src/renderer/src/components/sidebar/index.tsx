@@ -22,6 +22,8 @@ import { useSidebarSpaceSwipe } from './spaces/use-sidebar-space-swipe'
 import { resolveLeftSidebarStyleVariables } from '@/lib/left-sidebar-appearance'
 import { useSystemPrefersDark } from '@/components/terminal-pane/use-system-prefers-dark'
 import { lazyWithRetry } from '@/lib/lazy-with-retry'
+import { LocalGitToolchainScanBanner } from './LocalGitToolchainScanBanner'
+import { SeveredTerminalDaemonBanner } from './SeveredTerminalDaemonBanner'
 
 // Why lazy: the Agents list pulls the whole activity pipeline (virtualizer, markdown
 // previews, thread derivation); users on the workspace view should not load or render any of it.
@@ -99,7 +101,7 @@ function Sidebar({
     () => resolveLeftSidebarStyleVariables(settings, systemPrefersDark),
     [settings, systemPrefersDark]
   ) as React.CSSProperties | undefined
-  const { nativeDropTarget, dropHandlers, affordance } = useSidebarProjectDrop()
+  const { dropOwnerRef, dropHandlers, affordance } = useSidebarProjectDrop()
   const {
     workspaceBoardOpen,
     workspaceBoardRenderedOpen,
@@ -174,12 +176,19 @@ function Sidebar({
   useSidebarSpaceSwipe(containerRef)
 
   useWorkspaceRevealBodyRedirect(sidebarOpen && sidebarBody === 'agents')
+  // A collapsed sidebar takes no drops.
+  const sidebarRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      containerRef.current = node
+      dropOwnerRef(sidebarOpen ? node : null)
+    },
+    [containerRef, dropOwnerRef, sidebarOpen]
+  )
 
   return (
     <TooltipProvider delayDuration={400}>
       <div
-        ref={containerRef}
-        data-native-file-drop-target={sidebarOpen ? nativeDropTarget : undefined}
+        ref={sidebarRef}
         className="relative min-h-0 flex-shrink-0 bg-worktree-sidebar flex flex-col overflow-hidden scrollbar-sleek-parent"
         style={leftSidebarStyle}
         {...dropHandlers}
@@ -192,6 +201,7 @@ function Sidebar({
               onWorkspaceBoardMenuOpenChange={setWorkspaceBoardMenuOpen}
               activityOptionsTarget={setAgentOptionsTarget}
             />
+            <SeveredTerminalDaemonBanner />
             {sidebarBody === 'agents' ? (
               <React.Suspense fallback={<div className="min-h-0 flex-1" />}>
                 <ActivityThreadCollapseContext.Provider value={agentsCollapseState}>
@@ -208,17 +218,20 @@ function Sidebar({
                 </ActivityThreadCollapseContext.Provider>
               </React.Suspense>
             ) : (
-              <WorktreeList
-                scrollOffsetRef={worktreeScrollOffsetRef}
-                scrollAnchorRef={worktreeScrollAnchorRef}
-                workspaceBoardOpen={workspaceBoardOpen}
-                onWorktreeCardClick={closeWorkspaceBoard}
-                onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
-                onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
-                onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
-                onSpaceDropHoverChange={setHoverSpaceTargetId}
-                onManageSpaceMembers={spaceDialogs.openMembers}
-              />
+              <>
+                <LocalGitToolchainScanBanner />
+                <WorktreeList
+                  scrollOffsetRef={worktreeScrollOffsetRef}
+                  scrollAnchorRef={worktreeScrollAnchorRef}
+                  workspaceBoardOpen={workspaceBoardOpen}
+                  onWorktreeCardClick={closeWorkspaceBoard}
+                  onWorkspaceBoardDragPreviewStart={previewWorkspaceBoardFromDrag}
+                  onWorkspaceBoardDragPreviewCommit={solidifyWorkspaceBoardFromDrag}
+                  onWorkspaceBoardDragPreviewCancel={cancelWorkspaceBoardDragPreview}
+                  onSpaceDropHoverChange={setHoverSpaceTargetId}
+                  onManageSpaceMembers={spaceDialogs.openMembers}
+                />
+              </>
             )}
 
             <div className="relative shrink-0">

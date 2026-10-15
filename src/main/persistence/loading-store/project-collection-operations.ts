@@ -31,6 +31,8 @@ import {
 import { scheduleSave } from './write-scheduling'
 import { removeWorkspaceLineageForFolderParent } from './metadata-lineage-operations'
 import { bumpLocalWorktreeScanGeneration } from '../../local-worktree-scan-generation'
+import { dropOrcadTerminalRestoreHintsForWorktrees } from '../migrating-orcad-catalog/orcad-terminal-restore-hint-store'
+import { folderWorkspaceKey } from '../../../shared/workspace-scope'
 
 type ProjectCollectionOperationsRuntime = Pick<
   StoreRuntimeState,
@@ -40,6 +42,7 @@ type ProjectCollectionOperationsRuntime = Pick<
   | 'projectHostOperations'
   | 'spaceOperations'
   | 'state'
+  | 'orcadTerminalRestoreHints'
 >
 
 const projectCollectionOperationsContext = Symbol('ProjectCollectionOperations')
@@ -59,7 +62,12 @@ export class ProjectCollectionOperations {
     scheduling: WriteSchedulingOperations,
     metadata: MetadataLineageOperations
   ) {
-    this[projectCollectionOperationsContext] = { runtime, repos, scheduling, metadata }
+    this[projectCollectionOperationsContext] = {
+      runtime,
+      repos,
+      scheduling,
+      metadata
+    }
   }
 
   getRepos(): Repo[] {
@@ -172,7 +180,15 @@ export class ProjectCollectionOperations {
   }
 
   removeFolderWorkspace(id: string): boolean {
-    return getFolderWorkspaceOperations(this).removeFolderWorkspace(id)
+    const removed = getFolderWorkspaceOperations(this).removeFolderWorkspace(id)
+    if (removed) {
+      const workspaceKey = folderWorkspaceKey(id)
+      dropOrcadTerminalRestoreHintsForWorktrees(
+        this[projectCollectionOperationsContext].runtime.orcadTerminalRestoreHints,
+        (worktreeId) => worktreeId === workspaceKey
+      )
+    }
+    return removed
   }
 
   moveProjectToGroup(repoId: string, groupId: string | null, order?: number): Repo | null {
@@ -259,13 +275,4 @@ export function getFolderWorkspaceOperations(
       hydrateRepo: (repo) => hydrateRepo(owner[projectCollectionOperationsContext].repos, repo)
     })
   return owner[projectCollectionOperationsContext].runtime.folderWorkspaceOperations
-}
-
-export function installProjectCollectionOperationsContext(
-  target: ProjectCollectionOperations,
-  source: ProjectCollectionOperations
-): void {
-  Object.defineProperty(target, projectCollectionOperationsContext, {
-    value: source[projectCollectionOperationsContext]
-  })
 }

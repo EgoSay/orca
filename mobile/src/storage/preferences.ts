@@ -118,40 +118,23 @@ export async function saveTerminalAutocompleteEnabled(enabled: boolean): Promise
   await persistMirrored(AUTOCOMPLETE_KEY, value)
 }
 
-const MOBILE_WEB_SHELL_KEY = 'orca:mobileWebShellEnabled'
+export type MobileShellBuildKind = 'native' | 'ota'
 
-// Why: the hybrid shell route is dark. Default-off means a store build never fetches, writes or
-// sweeps a bundle cache, and the only writer is the __DEV__ Troubleshoot toggle — anything but
-// `'true'`, including an unreadable store, is off.
 /**
- * Whether this build can have the flag on at all.
+ * Which shell this binary was built for, and the only place the build-time constant is spelled.
  *
- * A release build never reads the key: it shares its bundle id with the development build and the
- * iOS data container survives an install-over, so a flag a developer left on would otherwise
- * follow the store build in and mount the shell on a deep link.
+ * `babel-preset-expo`'s inline-env-vars plugin replaces a literal `process.env.EXPO_PUBLIC_*`
+ * member expression with the build machine's value, so in a release bundle this function has no
+ * variable left in it. That rewrite only fires on a literal member expression: a destructure, a
+ * computed key or a copy through another binding is not inlined and would read `undefined` on a
+ * device, which is why every caller goes through this one and never through `process.env`.
  *
- * Named rather than spelled twice. The hook beside the reader starts its state on this answer so
- * a store build is decided on its first render rather than after an effect, and two spellings of
- * one `__DEV__` test would be two things to keep true.
+ * Anything but the exact string `ota` — unset, empty, a typo, a value from a stale shell — is
+ * native. A build without the variable, development or release, is the native app; the hybrid shell
+ * mounts only in a build made with it, and nothing stored can change that.
  */
-export function mobileWebShellFlagCanBeOn(): boolean {
-  return typeof __DEV__ !== 'undefined' && __DEV__
-}
-
-export async function loadMobileWebShellEnabled(): Promise<boolean> {
-  if (!mobileWebShellFlagCanBeOn()) {
-    return false
-  }
-  try {
-    const raw = await AsyncStorage.getItem(MOBILE_WEB_SHELL_KEY)
-    return raw === 'true'
-  } catch {
-    return false
-  }
-}
-
-export async function saveMobileWebShellEnabled(enabled: boolean): Promise<void> {
-  await AsyncStorage.setItem(MOBILE_WEB_SHELL_KEY, String(enabled))
+export function mobileShellBuildKind(): MobileShellBuildKind {
+  return process.env.EXPO_PUBLIC_MOBILE_SHELL === 'ota' ? 'ota' : 'native'
 }
 
 const TERMINAL_LIVE_INPUT_DISABLED_PREFIX = 'orca:terminalLiveInputDisabled:'
