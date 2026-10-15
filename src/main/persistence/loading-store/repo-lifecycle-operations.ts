@@ -1,5 +1,7 @@
+import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
 import type { ProjectHostSetup, ProjectHostSetupUpdateArgs } from '../../../shared/project-types'
 import type { Repo } from '../../../shared/repo-types'
+import type { GhAccountBinding } from '../../../shared/github/account-binding'
 import {
   removeRepoFromHostWorkspaceSessions,
   removeRepoFromWorkspaceSession
@@ -18,14 +20,28 @@ import { retireLocalWorktreeMetadataPruneStateForRepo } from '../../local-worktr
 import { hydrateRepo as hydrateRepoOperation } from '../tracking-repos/repo-hydration'
 import { RepoUpdatePersistenceOperations } from '../tracking-repos/repo-update-operations'
 import { ProjectHostSetupPersistenceOperations } from '../tracking-repos/project-host-setup-update'
-import { bumpLocalWorktreeScanGeneration } from '../../local-worktree-scan-generation'
-import type { PersistedState } from '../../../shared/persisted-state-types'
-import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
+import {
+  bumpLocalWorktreeScanGeneration,
+  retireLocalWorktreeScanGeneration
+} from '../../local-worktree-scan-generation'
 
 import type { StoreRuntimeState } from './store-runtime-state'
 import type { WriteSchedulingOperations } from './write-scheduling'
 import { scheduleSave } from './write-scheduling'
+import { pruneDeregisteredRepoUiResidue } from './repo-lifecycle-ui-residue'
+import { isWslMoveProjectSessionFrozen } from '../moving-wsl-projects/wsl-move-scope-guard'
+import { dropOrcadTerminalRestoreHintsForWorktrees } from '../migrating-orcad-catalog/orcad-terminal-restore-hint-store'
+import { getRepoIdFromWorktreeId } from '../../../shared/worktree/id'
 
+// A paused WSL move keeps its local rows for a downgrade.
+function removeLocalRepoSession(
+  session: WorkspaceSessionState,
+  repoId: string
+): WorkspaceSessionState {
+  return isWslMoveProjectSessionFrozen({ repoId })
+    ? session
+    : removeRepoFromWorkspaceSession(session, repoId)
+}
 type RepoLifecycleOperationsRuntime = Pick<
   StoreRuntimeState,
   | 'gitUsernameCache'
@@ -33,6 +49,7 @@ type RepoLifecycleOperationsRuntime = Pick<
   | 'repoOrderOperations'
   | 'repoUpdateOperations'
   | 'state'
+  | 'orcadTerminalRestoreHints'
 >
 
 const repoLifecycleOperationsContext = Symbol('RepoLifecycleOperations')
@@ -61,36 +78,6 @@ export class RepoLifecycleOperations {
     return getRepoOrderOperations(this).reorderReposForHost(orderedIds, hostId)
   }
 
-  removeProject(id: string): void {
-    const repoRemoved = this[repoLifecycleOperationsContext].runtime.state.repos.some(
-      (repo) => repo.id === id
-    )
-    this[repoLifecycleOperationsContext].runtime.state.repos = this[
-      repoLifecycleOperationsContext
-    ].runtime.state.repos.filter((r) => r.id !== id)
-    if (repoRemoved) {
-      bumpLocalWorktreeScanGeneration(id)
-    }
-    // Why: before the compatibility sync — it drops the repo-backed setup row this id resolves through.
-    removeRepoFromSpaces(this[repoLifecycleOperationsContext].runtime.state, id)
-    syncProjectHostSetupCompatibilityState(this)
-    // Why: presets are repo-scoped and unreachable once the repo is gone, so drop them with it.
-    delete this[repoLifecycleOperationsContext].runtime.state.sparsePresetsByRepo[id]
-    delete this[repoLifecycleOperationsContext].runtime.state.retiredWorktreeNamesByRepo?.[id]
-    pruneWorktreeStateForRepo(this, id, null)
-    this[repoLifecycleOperationsContext].runtime.state.workspaceSession =
-      removeRepoFromWorkspaceSession(
-        this[repoLifecycleOperationsContext].runtime.state.workspaceSession,
-        id
-      )
-    this[repoLifecycleOperationsContext].runtime.state.workspaceSessionsByHostId =
-      removeRepoFromHostWorkspaceSessions(
-        this[repoLifecycleOperationsContext].runtime.state.workspaceSessionsByHostId,
-        id
-      )
-    scheduleSave(this[repoLifecycleOperationsContext].scheduling)
-  }
-
   removeProjectForHost(id: string, hostId: ExecutionHostId): void {
     const repoRemoved = this[repoLifecycleOperationsContext].runtime.state.repos.some(
       (repo) => repo.id === id && getRepoExecutionHostId(repo) === hostId
@@ -105,20 +92,19 @@ export class RepoLifecycleOperations {
       (r) => r.id === id
     )
     removeRepoFromSpaces(this[repoLifecycleOperationsContext].runtime.state, id)
-    // Why: presets and retirements are repo-id-scoped (not host-scoped); drop them only when the last host's copy is gone.
     if (!idStillPresent) {
+      retireLocalWorktreeScanGeneration(id)
+      dropRepoRestoreHints(this, id)
       delete this[repoLifecycleOperationsContext].runtime.state.sparsePresetsByRepo[id]
       delete this[repoLifecycleOperationsContext].runtime.state.retiredWorktreeNamesByRepo?.[id]
     }
     syncProjectHostSetupCompatibilityState(this)
-    // Why: prune only this host's worktree metas if the id survives elsewhere; otherwise prune everything (matches removeProject).
     pruneWorktreeStateForRepo(this, id, idStillPresent ? hostId : null)
     if (!idStillPresent) {
-      this[repoLifecycleOperationsContext].runtime.state.workspaceSession =
-        removeRepoFromWorkspaceSession(
-          this[repoLifecycleOperationsContext].runtime.state.workspaceSession,
-          id
-        )
+      this[repoLifecycleOperationsContext].runtime.state.workspaceSession = removeLocalRepoSession(
+        this[repoLifecycleOperationsContext].runtime.state.workspaceSession,
+        id
+      )
       this[repoLifecycleOperationsContext].runtime.state.workspaceSessionsByHostId =
         removeRepoFromHostWorkspaceSessions(
           this[repoLifecycleOperationsContext].runtime.state.workspaceSessionsByHostId,
@@ -139,12 +125,9 @@ export class RepoLifecycleOperations {
 
   /**
    * Drop every persisted row owned by a repo id that is no longer registered.
-   *
-   * Runs at load because no removal path can: `removeProject` only fires while the repo is still in
-   * `state.repos`, and a paired client's mirror of a remote host's rows is keyed by ids that client
-   * never registers, so the owning host's removal never reaches it (#17776). An orphan has no owner
-   * that could object, so this ignores the session-ownership and local-execution-host gates the
-   * missing-directory sweeper needs.
+   * Runs at load to reach leftover local rows after deregistration. Rows owned by a `runtime:*`
+   * host are exempt: this runs before pairing, so their absence from the local catalog cannot
+   * establish deletion. Only an explicit `removeProjectForHost` retires them.
    */
   sweepDeregisteredRepoResidue(): string[] {
     const state = this[repoLifecycleOperationsContext].runtime.state
@@ -153,8 +136,10 @@ export class RepoLifecycleOperations {
       return []
     }
     for (const repoId of orphanRepoIds) {
+      retireLocalWorktreeScanGeneration(repoId)
+      dropRepoRestoreHints(this, repoId)
       pruneWorktreeStateForRepo(this, repoId, null)
-      state.workspaceSession = removeRepoFromWorkspaceSession(state.workspaceSession, repoId)
+      state.workspaceSession = removeLocalRepoSession(state.workspaceSession, repoId)
       state.workspaceSessionsByHostId = removeRepoFromHostWorkspaceSessions(
         state.workspaceSessionsByHostId,
         repoId
@@ -174,10 +159,12 @@ export class RepoLifecycleOperations {
         | 'repoIcon'
         | 'upstream'
         | 'gitRemoteIdentity'
+        | 'defaultJiraProject'
         | 'hookSettings'
         | 'worktreeBaseRef'
         | 'worktreeBasePath'
         | 'kind'
+        | 'folderUpgradeGitRootPath'
         | 'executionHostId'
         | 'symlinkPaths'
         | 'issueSourcePreference'
@@ -196,11 +183,19 @@ export class RepoLifecycleOperations {
       agentWorktreeVisibility?: Repo['agentWorktreeVisibility'] | null
       sourceControlAi?: Repo['sourceControlAi'] | null
       externalWorktreeDiscoverySuppressedAt?: Repo['externalWorktreeDiscoverySuppressedAt'] | null
+      ghAccount?: GhAccountBinding | null
     },
     hostId?: ExecutionHostId
   ): Repo | null {
     return getRepoUpdateOperations(this).updateRepo(id, updates, hostId)
   }
+}
+
+function dropRepoRestoreHints(owner: RepoLifecycleOperations, repoId: string): void {
+  dropOrcadTerminalRestoreHintsForWorktrees(
+    owner[repoLifecycleOperationsContext].runtime.orcadTerminalRestoreHints,
+    (worktreeId) => getRepoIdFromWorktreeId(worktreeId) === repoId
+  )
 }
 
 export function getRepoOrderOperations(
@@ -226,8 +221,6 @@ export function pruneWorktreeStateForRepo(
     hostId,
     (matchesWorktreeId) => pruneMobileClientTabSelections(owner, matchesWorktreeId)
   )
-  // Why: this drops metadata, lineage, leases and session owners in bulk, which can unpin rows in
-  // other repos, and a full removal retires this repo's own gate state (#17775).
   retireLocalWorktreeMetadataPruneStateForRepo(id, hostId)
 }
 
@@ -246,26 +239,6 @@ export function pruneMobileClientTabSelections(
     if (Object.keys(selectionsByWorktree).length === 0) {
       delete owner[repoLifecycleOperationsContext].runtime.state
         .mobileClientTabSelectionsByDeviceId?.[clientNavigationId]
-    }
-  }
-}
-
-function pruneDeregisteredRepoUiResidue(
-  ui: PersistedState['ui'],
-  orphanRepoIds: ReadonlySet<string>
-): void {
-  const isOrphanWorktree = (worktreeId: string): boolean =>
-    orphanRepoIds.has(getRepoIdFromWorktreeId(worktreeId))
-  if (ui.lastActiveRepoId && orphanRepoIds.has(ui.lastActiveRepoId)) {
-    ui.lastActiveRepoId = null
-  }
-  if (ui.lastActiveWorktreeId && isOrphanWorktree(ui.lastActiveWorktreeId)) {
-    ui.lastActiveWorktreeId = null
-  }
-  ui.filterRepoIds = ui.filterRepoIds?.filter((repoId) => !orphanRepoIds.has(repoId)) ?? []
-  for (const worktreeId of Object.keys(ui.showDotfilesByWorktree ?? {})) {
-    if (isOrphanWorktree(worktreeId)) {
-      delete ui.showDotfilesByWorktree?.[worktreeId]
     }
   }
 }
@@ -325,13 +298,4 @@ export function updateIndependentProjectHostSetup(
 
 export function hydrateRepo(owner: RepoLifecycleOperations, repo: Repo): Repo {
   return hydrateRepoOperation(repo, owner[repoLifecycleOperationsContext].runtime.gitUsernameCache)
-}
-
-export function installRepoLifecycleOperationsContext(
-  target: object,
-  source: RepoLifecycleOperations
-): void {
-  Object.defineProperty(target, repoLifecycleOperationsContext, {
-    value: source[repoLifecycleOperationsContext]
-  })
 }

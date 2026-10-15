@@ -1,3 +1,4 @@
+import { expectSidebarProjectVisible } from './helpers/sidebar-project-visibility'
 import { openSidebarProjectDialog } from './helpers/sidebar-project-dialog'
 import { rmSync } from 'node:fs'
 import path from 'node:path'
@@ -562,8 +563,10 @@ async function runSelectedRuntimeAddJourney(
       if (!store) {
         throw new Error('Renderer store unavailable')
       }
-      await store.getState().fetchProjectGroups()
-      await store.getState().fetchFolderWorkspaces()
+      await store.getState().fetchProjectGroups({ runtimeEnvironmentId: null, throwOnError: true })
+      await store
+        .getState()
+        .fetchFolderWorkspaces({ runtimeEnvironmentId: null, throwOnError: true })
       return {
         folderWorkspaces: store.getState().folderWorkspaces,
         projectGroups: store.getState().projectGroups
@@ -727,7 +730,7 @@ async function runSelectedRuntimeAddJourney(
       ...fixture.nestedRepoPaths.map((repoPath) => path.basename(repoPath))
     ]) {
       // Why: duplicate checkout names are disambiguated with a parent path.
-      await expect(client.page.getByText(projectName, { exact: false }).first()).toBeVisible()
+      await expectSidebarProjectVisible(client.page, projectName)
     }
     expect(await client.getDirectSshAttemptTargetIds()).toEqual([])
     // Why: revealing the client must not leak into the HUB's window visibility.

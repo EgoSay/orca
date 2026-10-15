@@ -21,8 +21,8 @@ export function createAgentStatusRecoveryActions(
   | 'captureSleepingAgentSessionsByWorktree'
   | 'captureAllSleepingAgentSessions'
   | 'clearSleepingAgentSession'
+  | 'rememberSleepingAgentSession'
   | 'clearSleepingAgentSessionsByPaneKey'
-  | 'setSleepingAgentAutomaticResumeBlocked'
   | 'clearSleepingAgentSessionsByWorktree'
   | 'pruneSleepingAgentSessions'
 > {
@@ -107,33 +107,20 @@ export function createAgentStatusRecoveryActions(
     },
 
     clearSleepingAgentSession: (paneKey) => clearSleepingAgentSessionsByPaneKey([paneKey]),
-    clearSleepingAgentSessionsByPaneKey,
 
-    setSleepingAgentAutomaticResumeBlocked: (paneKey, blocked) => {
-      set((s) => {
-        const current = s.sleepingAgentSessionsByPaneKey[paneKey]
-        if (
-          !current ||
-          (blocked
-            ? current.automaticResumeBlockedBy === 'legacy-orchestration-worker'
-            : current.automaticResumeBlockedBy === undefined)
-        ) {
-          return s
-        }
-        const next = { ...current }
-        if (blocked) {
-          next.automaticResumeBlockedBy = 'legacy-orchestration-worker'
-        } else {
-          delete next.automaticResumeBlockedBy
-        }
-        return {
-          sleepingAgentSessionsByPaneKey: {
-            ...s.sleepingAgentSessionsByPaneKey,
-            [paneKey]: next
-          }
-        }
-      })
+    rememberSleepingAgentSession: (record) => {
+      set((s) =>
+        s.sleepingAgentSessionsByPaneKey[record.paneKey]
+          ? s
+          : {
+              sleepingAgentSessionsByPaneKey: {
+                ...s.sleepingAgentSessionsByPaneKey,
+                [record.paneKey]: record
+              }
+            }
+      )
     },
+    clearSleepingAgentSessionsByPaneKey,
 
     clearSleepingAgentSessionsByWorktree: (worktreeId) => {
       set((s) => {

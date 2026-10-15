@@ -1,5 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
-import { OrcaRuntimeWithResolveExitWaiters } from './orca-runtime-resolve-exit-waiters'
+import { OrcaRuntimeWithResolveExitWaiters } from './terminal/wait/terminal-wait-settlements'
 import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
 import { formatMessagePointer } from './orchestration/formatter'
 import { isCursorAgentOrchestrationTarget } from './orca-runtime-core'
@@ -111,7 +111,8 @@ export class OrcaRuntimeWithDeliverPendingMessages extends OrcaRuntimeWithResolv
               if (
                 currentLeaf?.ptyId === probedPtyId &&
                 currentLeaf.lastAgentStatus === 'idle' &&
-                currentLeaf.lastAgentStatusObservedLive
+                currentLeaf.lastAgentStatusObservedLive &&
+                this.checkDeliverySettledAndArmRecheck(currentLeaf)
               ) {
                 this.deliverPendingMessages(currentLeaf, {
                   mailboxHandle,
@@ -136,7 +137,7 @@ export class OrcaRuntimeWithDeliverPendingMessages extends OrcaRuntimeWithResolv
     let settlesInEnterCallback = false
     try {
       const payload = formatMessagePointer(unread.length, mailboxHandle)
-      const wrote = this.ptyController?.write(deliveryPtyId, payload) ?? false
+      const wrote = this.ptyController?.write(deliveryPtyId, payload, 'driving') ?? false
       if (!wrote) {
         return
       }
@@ -170,7 +171,7 @@ export class OrcaRuntimeWithDeliverPendingMessages extends OrcaRuntimeWithResolv
           if (!currentLeaf || currentLeaf.ptyId !== deliveryPtyId || !currentLeaf.writable) {
             return
           }
-          this.ptyController?.write(deliveryPtyId, '\r')
+          this.ptyController?.write(deliveryPtyId, '\r', 'driving')
         } catch {
           // Terminal may have closed during the delay; mail remains queued for check.
         } finally {

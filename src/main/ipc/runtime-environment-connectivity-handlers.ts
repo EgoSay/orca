@@ -6,6 +6,7 @@ import {
   resolveEnvironment
 } from '../../shared/runtime-environment-store'
 import {
+  isWslHostRuntimeEnvironment,
   redactRuntimeEnvironment,
   type PublicKnownRuntimeEnvironment
 } from '../../shared/runtime-environments'
@@ -14,24 +15,34 @@ import { RuntimeRpcCallQueueOverloadError } from '../../shared/runtime-rpc-call-
 import type { RuntimeRpcFailure, RuntimeRpcResponse } from '../../shared/runtime-rpc-envelope'
 import type { RuntimeStatus } from '../../shared/runtime-types'
 import type { Store } from '../persistence'
-import { clearBrowserRoutePartitionStorageForEnvironment } from '../browser/browser-route-partition-storage-runtime'
-import { retireBrowserRoutePartitionStorageForEnvironment } from '../browser/browser-route-partition-storage-retirement'
+import { retireRemovedRuntimeEnvironment } from './runtime-environment-removal-cleanup'
+import { readSettingsWithRuntimeEnvironmentPreference } from './runtime-environment-preference'
 import { verifyAndAddRuntimeEnvironmentFromPairingCode } from './runtime-environment-pairing-verification'
-import { clearRuntimeEnvironmentCapabilityEvidence } from './runtime-environment-capability-evidence'
 import {
   closeRemoteRuntimeRequestConnection,
+  getRuntimeEnvironmentStatusOwner,
+  getRuntimeEnvironmentStatusSnapshots,
   retryRemoteRuntimeSharedControlConnectionNow
 } from './runtime-environment-request-connections'
 import {
   clearRuntimeEnvironmentManualDisconnect,
   isRuntimeEnvironmentManuallyDisconnected,
-  markRuntimeEnvironmentManuallyDisconnected
+  markRuntimeEnvironmentManuallyDisconnected,
+  RUNTIME_MANUALLY_DISCONNECTED_MESSAGE
 } from './runtime-environment-manual-disconnect'
 import {
   callRuntimeEnvironment,
-  clearSharedControlSupport,
   getRuntimeEnvironmentStatus
 } from './runtime-environment-transport-routing'
+import { publicRuntimeEnvironmentWithHostKey } from './runtime-environment-host-key'
+import { withWslOrcadAccountEnv } from '../wsl/wsl-orcad-account-env'
+import { clearSshCredentialDeclinedForEnvironment } from '../ssh/ssh-credential-decline'
+import {
+  observeWslOrcadHostResponse,
+  wslOrcadHostSupports
+} from '../wsl/wsl-orcad-host-environments'
+import { getWslHostService } from '../wsl/wsl-host-service-instance'
+import { assertWslHostReachable, isGatedOffWslHost } from '../wsl/wsl-host-gate'
 
 function manuallyDisconnectedResponse(
   environment: ReturnType<typeof resolveEnvironment>
@@ -41,7 +52,7 @@ function manuallyDisconnectedResponse(
     ok: false,
     error: {
       code: 'runtime_manually_disconnected',
-      message: 'Runtime environment is manually disconnected.'
+      message: RUNTIME_MANUALLY_DISCONNECTED_MESSAGE
     },
     _meta: { runtimeId: environment.runtimeId }
   }
@@ -60,9 +71,16 @@ export function registerRuntimeEnvironmentConnectivityHandlers({
   getUserDataPath,
   invalidateTransport
 }: ConnectivityHandlerOptions): void {
-  ipcMain.handle('runtimeEnvironments:list', () =>
-    listEnvironments(getUserDataPath()).map(redactRuntimeEnvironment)
+  ipcMain.handle('runtimeEnvironments:getStatusSnapshots', () =>
+    getRuntimeEnvironmentStatusSnapshots()
   )
+  ipcMain.handle('runtimeEnvironments:list', () => {
+    const environments = listEnvironments(getUserDataPath()).filter(
+      (environment) => !isGatedOffWslHost(environment)
+    )
+    readSettingsWithRuntimeEnvironmentPreference(store, getUserDataPath())
+    return environments.map(publicRuntimeEnvironmentWithHostKey)
+  })
   ipcMain.handle(
     'runtimeEnvironments:addFromPairingCode',
     (
@@ -80,6 +98,12 @@ export function registerRuntimeEnvironmentConnectivityHandlers({
       const result = await verifyAndAddRuntimeEnvironmentFromPairingCode(getUserDataPath(), args)
       if (result.ok) {
         clearRuntimeEnvironmentManualDisconnect(result.environment.id)
+        getRuntimeEnvironmentStatusOwner(getUserDataPath(), result.environment.id).acceptVerified({
+          id: 'status.get',
+          ok: true,
+          result: result.runtimeStatus,
+          _meta: { runtimeId: result.runtimeStatus.runtimeId }
+        })
       }
       return result
     }
@@ -89,28 +113,30 @@ export function registerRuntimeEnvironmentConnectivityHandlers({
   )
   ipcMain.handle(
     'runtimeEnvironments:remove',
-    (_event, args: { selector: string }): { removed: PublicKnownRuntimeEnvironment } => {
+    (
+      _event,
+      args: { selector: string }
+    ):
+      | { removed: PublicKnownRuntimeEnvironment }
+      | Promise<{ removed: PublicKnownRuntimeEnvironment }> => {
       const environment = resolveEnvironment(getUserDataPath(), args.selector)
       if (store.getSettings().activeRuntimeEnvironmentId === environment.id) {
-        throw new Error('Choose another Active Server in Advanced before removing this server.')
+        throw new Error(
+          'This server is the default host for new projects. Choose another one in Advanced before removing it.'
+        )
+      }
+      // A closed gate leaves persisted WSL hosts untouched on disk.
+      assertWslHostReachable(environment)
+      const wsl = isWslHostRuntimeEnvironment(environment) ? getWslHostService() : null
+      if (wsl) {
+        // Also releases the distro's holder and drops the WSL record.
+        return wsl
+          .remove(environment.id)
+          .then(() => ({ removed: redactRuntimeEnvironment(environment) }))
       }
       const removed = removeEnvironment(getUserDataPath(), args.selector)
-      clearRuntimeEnvironmentCapabilityEvidence(removed.id)
-      clearRuntimeEnvironmentManualDisconnect(removed.id)
-      const retiring = Promise.resolve(invalidateTransport(removed.id))
+      void retireRemovedRuntimeEnvironment(removed.id, invalidateTransport, store)
       closeLegacySelectorTransport(args.selector, removed.id)
-      // Why: removal is an explicit lifecycle decision, so its client-hosted browser storage goes
-      // too -- but only once the client host releases its partitions, or every one refuses as live.
-      void retireBrowserRoutePartitionStorageForEnvironment({
-        environmentId: removed.id,
-        whenClientHostClosed: retiring,
-        clearStorage: clearBrowserRoutePartitionStorageForEnvironment,
-        onError: (error) => {
-          console.warn('[runtime-environments] browser partition storage clear failed:', error)
-        }
-      }).catch((error) => {
-        console.warn('[runtime-environments] browser partition storage clear failed:', error)
-      })
       return { removed: redactRuntimeEnvironment(removed) }
     }
   )
@@ -121,6 +147,8 @@ export function registerRuntimeEnvironmentConnectivityHandlers({
       markRuntimeEnvironmentManuallyDisconnected(environment.id)
       invalidateTransport(environment.id)
       closeLegacySelectorTransport(args.selector, environment.id)
+      // Retain disconnected evidence for renderers that missed the teardown event.
+      getRuntimeEnvironmentStatusOwner(getUserDataPath(), environment.id)
       return { disconnected: redactRuntimeEnvironment(environment) }
     }
   )
@@ -131,8 +159,16 @@ export function registerRuntimeEnvironmentConnectivityHandlers({
       args: { selector: string; timeoutMs?: number }
     ): Promise<RuntimeRpcResponse<RuntimeStatus>> => {
       const environment = resolveEnvironment(getUserDataPath(), args.selector)
+      assertWslHostReachable(environment)
       clearRuntimeEnvironmentManualDisconnect(environment.id)
-      return getRuntimeEnvironmentStatus(getUserDataPath(), environment.id, args.timeoutMs)
+      clearSshCredentialDeclinedForEnvironment(environment)
+      if (isWslHostRuntimeEnvironment(environment)) {
+        // An explicit connect may boot the distro.
+        await getWslHostService()?.connect(environment.id)
+      }
+      return getRuntimeEnvironmentStatus(getUserDataPath(), environment.id, args.timeoutMs, {
+        reconnect: true
+      })
     }
   )
   ipcMain.handle(
@@ -156,7 +192,6 @@ function closeLegacySelectorTransport(selector: string, environmentId: string): 
     return
   }
   closeRemoteRuntimeRequestConnection(selector)
-  clearSharedControlSupport(selector)
 }
 
 function registerPassiveStatusHandler(getUserDataPath: () => string): void {
@@ -176,6 +211,7 @@ function registerPassiveStatusHandler(getUserDataPath: () => string): void {
         args.timeoutMs,
         args.observeOnly ? { observeOnly: true } : undefined
       )
+      observeWslOrcadHostResponse(environment.id, 'status.get', response)
       return isRuntimeEnvironmentManuallyDisconnected(environment.id)
         ? manuallyDisconnectedResponse(environment)
         : response
@@ -213,11 +249,30 @@ function registerPassiveCallHandler(getUserDataPath: () => string): void {
         params?: unknown
         timeoutMs?: number
         expectedEnvironmentPairingRevision?: number
+        expectedEnvironmentRuntimeId?: string
       }
     ): Promise<RuntimeRpcResponse<unknown>> => {
       const environment = resolveEnvironment(getUserDataPath(), args.selector)
       if (isRuntimeEnvironmentManuallyDisconnected(environment.id)) {
         return manuallyDisconnectedResponse(environment)
+      }
+      // Why here: every renderer call to a paired host passes this one handler.
+      const accounts = await withWslOrcadAccountEnv({
+        environmentId: environment.id,
+        method: args.method,
+        params: args.params,
+        hostSupports: (capability) =>
+          wslOrcadHostSupports(environment.id, capability, () =>
+            callRuntimeEnvironment(getUserDataPath(), environment.id, 'status.get', undefined)
+          )
+      })
+      if (!accounts.ok) {
+        return {
+          id: args.method,
+          ok: false,
+          error: { code: 'account_preparation_failed', message: accounts.message },
+          _meta: { runtimeId: environment.runtimeId }
+        }
       }
       let response: RuntimeRpcResponse<unknown>
       try {
@@ -225,9 +280,11 @@ function registerPassiveCallHandler(getUserDataPath: () => string): void {
           getUserDataPath(),
           environment.id,
           args.method,
-          args.params,
+          accounts.params,
           args.timeoutMs,
-          args.expectedEnvironmentPairingRevision
+          args.expectedEnvironmentPairingRevision,
+          undefined,
+          { expectedEnvironmentRuntimeId: args.expectedEnvironmentRuntimeId }
         )
       } catch (error) {
         const failure = runtimeEnvironmentCallFailure(environment, args.method, error)
@@ -236,6 +293,7 @@ function registerPassiveCallHandler(getUserDataPath: () => string): void {
         }
         throw error
       }
+      observeWslOrcadHostResponse(environment.id, args.method, response)
       return isRuntimeEnvironmentManuallyDisconnected(environment.id)
         ? manuallyDisconnectedResponse(environment)
         : response

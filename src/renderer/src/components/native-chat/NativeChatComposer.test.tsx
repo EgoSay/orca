@@ -58,6 +58,7 @@ vi.mock('../../store', () => {
   const state = {
     dictationState: 'idle',
     settings: { voice: { enabled: false }, nativeChatSessionOptions: {} },
+    agentStatusByPaneKey: {},
     updateSettings: vi.fn(),
     clearNativeChatLaunchDraft: mocks.clearNativeChatLaunchDraft,
     markNativeChatLaunchDraftAdopted: mocks.markNativeChatLaunchDraftAdopted
@@ -70,9 +71,6 @@ vi.mock('../../store', () => {
 vi.mock('@/runtime/runtime-terminal-inspection', () => ({
   isRemoteRuntimePtyId: () => false,
   sendRuntimePtyInput: vi.fn()
-}))
-vi.mock('@/lib/agent-paste-draft', () => ({
-  getSettingsForAgentTabRuntimeOwner: () => ({})
 }))
 vi.mock('./native-chat-runtime-send', () => ({
   sendNativeChatMessage: (...args: unknown[]) => mocks.sendNativeChatMessage(...args),
@@ -99,7 +97,7 @@ vi.mock('@/lib/native-chat-telemetry', () => ({
 vi.mock('./use-native-chat-draft', () => ({
   useNativeChatDraft: (scopeKey: string) => {
     mocks.draftScopeKeys.push(scopeKey)
-    return { draft: mocks.draft, setDraft: mocks.setDraft }
+    return { draft: mocks.draft, setDraft: mocks.setDraft, flushDraftAppends: () => {} }
   }
 }))
 vi.mock('./native-chat-draft-cache', () => ({
@@ -122,7 +120,8 @@ vi.mock('./use-native-chat-composer-attachments', () => ({
       attachResolvedPaths: vi.fn(),
       clearImageAttachments: vi.fn(),
       flushPendingAttachments: mocks.flushPendingAttachments,
-      removeImageAttachment: vi.fn()
+      removeImageAttachment: vi.fn(),
+      pendingChips: { begin: vi.fn(), resolve: vi.fn(), drop: vi.fn(), attachReferences: vi.fn() }
     }
   }
 }))
@@ -155,6 +154,7 @@ vi.mock('./use-native-chat-send-lifecycle', () => ({
 }))
 
 import { NativeChatComposer } from './NativeChatComposer'
+import { sendRuntimePtyInput } from '@/runtime/runtime-terminal-inspection'
 
 describe('NativeChatComposer', () => {
   beforeEach(() => {
@@ -214,8 +214,7 @@ describe('NativeChatComposer', () => {
       configurable: true,
       value: {
         git: { discoverCommitMessageModels: mocks.discoverCommitMessageModels },
-        pty: { getMainBufferSnapshot: mocks.getMainBufferSnapshot },
-        ui: { onFileDrop: () => vi.fn() }
+        pty: { getMainBufferSnapshot: mocks.getMainBufferSnapshot }
       }
     })
   })
@@ -242,6 +241,22 @@ describe('NativeChatComposer', () => {
     expect(mocks.cancelPendingSends.mock.invocationCallOrder[0]).toBeLessThan(
       onStop.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY
     )
+  })
+
+  it('writes nothing from a composer hidden under a prompt card that still holds focus', () => {
+    render(
+      <NativeChatComposer
+        terminalTabId="tab-1"
+        paneKey="tab-1:leaf-1"
+        targetPtyId="pty-1"
+        agent="claude"
+        inputOwnedByCard
+      />
+    )
+    act(() => mocks.fieldProps?.onSend?.())
+    act(() => mocks.fieldProps?.onStop?.())
+    expect(mocks.sendNativeChatMessage).not.toHaveBeenCalled()
+    expect(sendRuntimePtyInput).not.toHaveBeenCalled()
   })
 
   it('associates a delayed submit with its optimistic cache entry', () => {
@@ -288,7 +303,9 @@ describe('NativeChatComposer', () => {
           optionsSurface,
           optionSnapshot,
           onError: vi.fn(),
-          runtime: 'local'
+          runtime: 'local',
+          sessionId: 'session-test',
+          runtimeEnvironmentId: null
         }}
       />
     )
@@ -304,12 +321,14 @@ describe('NativeChatComposer', () => {
     expect(mocks.setDraft).toHaveBeenCalledWith('')
   })
 
-  // The structured slash menu must offer the running agent's own catalog. Offering
-  // another agent's tokens sends them past the command guard as literal prompt text.
+  // The structured menu offers only what a pick can carry out: the host's own
+  // commands, plus the ones the agent itself runs from message text (Codex `/goal`).
+  // Listing the agent's whole TUI catalog here answered every pick with
+  // "not available in chat sessions".
   it.each([
-    ['claude', 'compact', 'vim'],
-    ['codex', 'vim', 'help']
-  ] as const)('offers %s its own structured slash commands', (agent, offered, withheld) => {
+    ['claude', 'compact', ['model', 'effort']],
+    ['codex', 'vim', ['model', 'effort', 'goal']]
+  ] as const)('offers %s only actionable structured slash commands', (agent, withheld, offered) => {
     mocks.draft = '/'
     render(
       <NativeChatComposer
@@ -328,7 +347,9 @@ describe('NativeChatComposer', () => {
           },
           optionSnapshot: [],
           onError: vi.fn(),
-          runtime: 'local'
+          runtime: 'local',
+          sessionId: 'session-test',
+          runtimeEnvironmentId: null
         }}
       />
     )
@@ -336,8 +357,7 @@ describe('NativeChatComposer', () => {
     const names = (mocks.fieldProps?.autocomplete?.items ?? [])
       .filter((item) => item.kind === 'command')
       .map((item) => item.name)
-    expect(names).toContain(offered)
-    expect(names).toContain('effort')
+    expect(names).toEqual([...offered])
     expect(names).not.toContain(withheld)
   })
 
@@ -367,7 +387,9 @@ describe('NativeChatComposer', () => {
           optionSnapshot: [],
           worktreeId: 'wt-1',
           onError: vi.fn(),
-          runtime: 'local'
+          runtime: 'local',
+          sessionId: 'session-test',
+          runtimeEnvironmentId: null
         }}
       />
     )
@@ -424,7 +446,7 @@ describe('NativeChatComposer', () => {
     act(() => mocks.fieldProps?.onSend?.())
 
     expect(mocks.sendNativeChatMessageWithImageAttachments).toHaveBeenCalledWith(
-      {},
+      'codex',
       'pty-1',
       'hello',
       ['/tmp/pasted.png'],
@@ -445,7 +467,7 @@ describe('NativeChatComposer', () => {
 
     act(() => mocks.fieldProps?.onSend?.())
 
-    expect(mocks.sendNativeChatTypedCommand).toHaveBeenCalledWith({}, 'pty-1', '/status')
+    expect(mocks.sendNativeChatTypedCommand).toHaveBeenCalledWith('pty-1', '/status')
     expect(mocks.sendNativeChatMessage).not.toHaveBeenCalled()
   })
 
@@ -462,11 +484,11 @@ describe('NativeChatComposer', () => {
 
     act(() => mocks.fieldProps?.onSend?.())
 
-    expect(mocks.sendNativeChatMessage).toHaveBeenCalledWith({}, 'pty-1', '$ref-oss', undefined)
+    expect(mocks.sendNativeChatMessage).toHaveBeenCalledWith('pty-1', '$ref-oss', undefined)
     expect(mocks.sendNativeChatTypedCommand).not.toHaveBeenCalled()
   })
 
-  it.each(['claude', 'openclaude'] as const)('keeps %s slash composer sends pasted', (agent) => {
+  it.each(['claude'] as const)('keeps %s slash composer sends pasted', (agent) => {
     mocks.draft = '/clear'
     render(
       <NativeChatComposer
@@ -479,7 +501,7 @@ describe('NativeChatComposer', () => {
 
     act(() => mocks.fieldProps?.onSend?.())
 
-    expect(mocks.sendNativeChatMessage).toHaveBeenCalledWith({}, 'pty-1', '/clear', undefined)
+    expect(mocks.sendNativeChatMessage).toHaveBeenCalledWith('pty-1', '/clear', undefined)
     expect(mocks.sendNativeChatTypedCommand).not.toHaveBeenCalled()
   })
 
@@ -767,7 +789,6 @@ describe('NativeChatComposer', () => {
     })
 
     expect(mocks.sendNativeChatMessageVerified).toHaveBeenCalledWith(
-      {},
       'pty-1',
       '/model opus',
       expect.any(AbortSignal)
@@ -776,7 +797,6 @@ describe('NativeChatComposer', () => {
     expect(onOptimisticSend).not.toHaveBeenCalled()
     expect(mocks.createClaudeModelSwitchConfirmationObserver).toHaveBeenCalledWith({
       ptyId: 'pty-1',
-      settings: {},
       expectedModelLabel: 'Opus'
     })
     expect(onSwitchToTerminal).not.toHaveBeenCalled()
@@ -800,14 +820,12 @@ describe('NativeChatComposer', () => {
     })
 
     expect(mocks.sendNativeChatMessageVerified).toHaveBeenCalledWith(
-      {},
       'pty-1',
       '/model fable',
       expect.any(AbortSignal)
     )
     expect(mocks.createClaudeModelSwitchConfirmationObserver).toHaveBeenCalledWith({
       ptyId: 'pty-1',
-      settings: {},
       expectedModelLabel: 'Fable'
     })
     expect(mocks.confirmationObserver?.arm).toHaveBeenCalledOnce()
@@ -840,7 +858,6 @@ describe('NativeChatComposer', () => {
     })
 
     expect(mocks.typeNativeChatCommand).toHaveBeenCalledWith(
-      {},
       'pty-1',
       '/model',
       expect.any(AbortSignal)

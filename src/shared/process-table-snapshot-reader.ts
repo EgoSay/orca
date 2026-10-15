@@ -2,11 +2,17 @@ import { execFile as execFileCb } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import {
+  captureDarwinProcessTable,
+  resetDarwinProcessTableCaptureForTests
+} from './darwin-process-table-capture'
+import {
   PROCESS_TABLE_SNAPSHOT_MAX_STALENESS_MS,
   PS_ARGS,
   PS_MAX_BUFFER_BYTES,
   ProcessTableCaptureError,
+  SHELL_FOREGROUND_PS_ARGS,
   parseProcessTableRows,
+  parseShellForegroundRows,
   parseStrictProcessTableRows,
   type ProcessTableRow
 } from './process-table-snapshot'
@@ -21,7 +27,6 @@ const execFile = promisify(execFileCb)
 // whole subsystem answered "unverifiable" about a table it could read. This keeps a wedged
 // `ps` bounded while staying out of reach of a host that is merely busy.
 export const PS_TIMEOUT_MS = 15_000
-const DEFAULT_SNAPSHOT_TTL_MS = PROCESS_TABLE_SNAPSHOT_MAX_STALENESS_MS
 
 type Snapshot<T> = { value: T; capturedAtMs: number; completedAtMs: number }
 
@@ -40,7 +45,7 @@ export function createProcessTableSnapshotReader<T = string>(
   getFreshSnapshot: () => Promise<T>
   reset: () => void
 } {
-  const ttlMs = deps.ttlMs ?? DEFAULT_SNAPSHOT_TTL_MS
+  const ttlMs = deps.ttlMs ?? PROCESS_TABLE_SNAPSHOT_MAX_STALENESS_MS
   let cached: Snapshot<T> | null = null
   let inFlight: Promise<T> | null = null
   let sequence = 0
@@ -224,10 +229,7 @@ export function parseLinuxProcStatStartTime(stat: string): string | null {
 /** Read Linux's stable PID start-time ticks without spawning another process. */
 async function readLinuxProcessStartTimes(
   rows: readonly ProcessTableRow[]
-): Promise<ReadonlyMap<number, string> | undefined> {
-  if (process.platform !== 'linux') {
-    return undefined
-  }
+): Promise<ReadonlyMap<number, string>> {
   const candidates = rows.filter((row) => row.tty !== undefined && row.tty !== '?')
   const starts = await Promise.all(
     candidates.map(async (row) => {
@@ -250,28 +252,51 @@ async function readLinuxProcessStartTimes(
   return result
 }
 
+async function captureProcessTable(args: readonly string[], timeout = PS_TIMEOUT_MS) {
+  let stdout: string
+  try {
+    ;({ stdout } = await execFile('ps', [...args], {
+      encoding: 'utf-8',
+      timeout,
+      maxBuffer: PS_MAX_BUFFER_BYTES
+    }))
+  } catch (error) {
+    // A ceiling hit is truncation, not absence: name it in the domain vocabulary.
+    if ((error as { code?: unknown } | null)?.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+      throw new ProcessTableCaptureError('capture_truncated')
+    }
+    throw error
+  }
+  return assertWholeCapture(stdout)
+}
+
 const processTableReader = createProcessTableSnapshotReader<ProcessTableCapture>({
   runPs: async () => {
-    let stdout: string
-    try {
-      ;({ stdout } = await execFile('ps', [...PS_ARGS], {
-        encoding: 'utf-8',
-        timeout: PS_TIMEOUT_MS,
-        maxBuffer: PS_MAX_BUFFER_BYTES
-      }))
-    } catch (error) {
-      // A ceiling hit is truncation, not absence: name it in the domain vocabulary.
-      if ((error as { code?: unknown } | null)?.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
-        throw new ProcessTableCaptureError('capture_truncated')
-      }
-      throw error
+    const stdout =
+      process.platform === 'darwin'
+        ? await captureDarwinProcessTable(captureProcessTable, assertWholeCapture, PS_TIMEOUT_MS)
+        : await captureProcessTable(PS_ARGS)
+    if (process.platform !== 'linux') {
+      return createProcessTableCapture(stdout)
     }
-    const baseCapture = createProcessTableCapture(assertWholeCapture(stdout))
-    const startTimesByPid = await readLinuxProcessStartTimes(baseCapture.lenient())
-    return createProcessTableCapture(stdout, startTimesByPid, process.platform === 'linux')
+    const startTimesByPid = await readLinuxProcessStartTimes(parseProcessTableRows(stdout))
+    return createProcessTableCapture(stdout, startTimesByPid, true)
   },
   now: () => Date.now()
 })
+
+// Its own reader, not a column-set flag on the shared one: terminal-name resolution dominates
+// macOS capture time, and a shell proof must not queue behind a full capture it cannot use.
+const shellForegroundReader = createProcessTableSnapshotReader<ProcessTableRow[]>({
+  runPs: async () => parseShellForegroundRows(await captureProcessTable(SHELL_FOREGROUND_PS_ARGS)),
+  now: () => Date.now()
+})
+
+export async function getFreshShellForegroundSnapshot(): Promise<ProcessTableRow[]> {
+  return process.platform === 'darwin'
+    ? shellForegroundReader.getFreshSnapshot()
+    : getFreshProcessTableSnapshot()
+}
 
 export async function getProcessTableSnapshot(): Promise<ProcessTableRow[]> {
   return (await processTableReader.getSnapshot()).lenient()
@@ -334,4 +359,6 @@ export async function getStrictProcessTableSnapshotWithAge(): Promise<{
 
 export function resetProcessTableSnapshotForTests(): void {
   processTableReader.reset()
+  shellForegroundReader.reset()
+  resetDarwinProcessTableCaptureForTests()
 }

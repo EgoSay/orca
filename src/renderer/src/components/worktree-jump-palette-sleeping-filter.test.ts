@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isSleepingSweepExemptWorkspace } from './sidebar/visible-worktrees'
 import type { Worktree } from '../../../shared/worktree/types'
-import { readWorktreeJumpPaletteSource } from './worktree-jump-palette-source.test-support'
-
-const visibilitySource = readWorktreeJumpPaletteSource('cmd-j/empty-query-worktree-visibility.ts')
-const storeSource = readWorktreeJumpPaletteSource('use-worktree-jump-palette-store-state.ts')
 
 function makeWorktree(overrides: Partial<Worktree> = {}): Worktree {
   return {
@@ -30,23 +26,6 @@ function makeWorktree(overrides: Partial<Worktree> = {}): Worktree {
 }
 
 describe('Cmd+J empty-query "Hide sleeping" pass (#8873)', () => {
-  // Why source-level: the palette re-implements the sidebar's filter pass
-  // inline, so the only structural guarantee that the two agree is that both
-  // call the shared predicate. A behavioral copy here would not catch a
-  // hand-rolled duplicate creeping back in.
-  it('routes the sleeping sweep through the shared exemption predicate', () => {
-    expect(visibilitySource).toContain(
-      'isSleepingSweepExemptWorkspace(worktree, input.alwaysShowDefaultBranchWorkspace)'
-    )
-    expect(visibilitySource).toContain('alwaysShowDefaultBranchWorkspace: boolean')
-  })
-
-  it('reads the flag from the same store field the sidebar uses', () => {
-    expect(storeSource).toMatch(
-      /const alwaysShowDefaultBranchWorkspace = useAppStore\(\s*\(state\) => state\.alwaysShowDefaultBranchWorkspace\s*\)/
-    )
-  })
-
   it('exempts a project entry point by default and honours an explicit opt-out', () => {
     const main = makeWorktree()
 

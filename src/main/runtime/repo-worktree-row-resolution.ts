@@ -1,3 +1,4 @@
+import { preserveFolderUpgradeWorktreePath } from '../folder-upgrade-worktree-path'
 import {
   splitWorktreeId,
   splitWorktreeIdForFilesystem,
@@ -17,12 +18,31 @@ import type { WorktreeLineage } from '../../shared/worktree/lineage-types'
 import type { Repo } from '../../shared/repo-types'
 import type { WorktreeMeta } from '../../shared/worktree/meta-types'
 import type { ProjectExecutionRuntimeResolution } from '../../shared/project-execution-runtime'
-import type { Store } from '../persistence'
+import type { RuntimeStore } from './runtime-store-contract'
+
 import { areWorktreePathsEqual, mergeWorktree } from '../ipc/worktree-logic'
 import { pruneLineageForMissingRepoWorktrees } from '../worktree-lineage-pruning'
 import { getRepoOwnedWorktreeMeta } from '../worktree-metadata-ownership'
 import { resolveLocalProjectRuntimesForRepos } from '../project-runtime-git-options'
 import type { RuntimeWorktreeScanResult } from './repo-worktree-resolution-scan'
+
+type RepoWorktreeRowStore = Pick<
+  RuntimeStore,
+  | 'getRepos'
+  | 'getRepo'
+  | 'getProjects'
+  | 'getSettings'
+  | 'getAllWorktreeMeta'
+  | 'getAllWorktreeMetaForHost'
+  | 'getWorktreeMeta'
+  | 'getWorktreeMetaForHost'
+  | 'setWorktreeMeta'
+  | 'setWorktreeMetaForHost'
+  | 'getAllWorktreeLineage'
+  | 'getAllWorkspaceLineage'
+  | 'removeWorktreeLineage'
+  | 'removeWorkspaceLineage'
+>
 
 /**
  * Per-repo budget for one resolution pass. Why: mobile startup shares this path, so one slow repo
@@ -46,7 +66,7 @@ export type RepoWorktreeRow = Worktree & {
 }
 
 export type RepoWorktreeRowDeps = {
-  store: Store
+  store: RepoWorktreeRowStore
   /** The cache-aware per-repo scan. Injected so this module never owns scan-cache state. */
   scanRepo: (
     repo: Repo,
@@ -61,7 +81,7 @@ export type RepoWorktreeRowDeps = {
  * it last knew instead of an empty catalog. `worktrees:list` does the same for disconnected SSH.
  */
 export function listStoredWorktreeRowsForRepo(
-  store: Store,
+  store: RepoWorktreeRowStore,
   repo: Repo,
   repoOwnerCount = store.getRepos().filter((candidate) => candidate.id === repo.id).length
 ): GitWorktreeInfo[] {
@@ -132,7 +152,7 @@ export async function resolveRepoWorktreeRows(
     RESOLVED_WORKTREE_REPO_TIMEOUT_MS,
     null
   )) ?? { ok: false, worktrees: listStoredWorktreeRowsForRepo(store, repo, repoOwnerCount) }
-  const gitWorktrees = scan.worktrees
+  const gitWorktrees = preserveFolderUpgradeWorktreePath(repo, scan.worktrees)
   if (scan.ok) {
     pruneLineageForMissingRepoWorktrees(store, repo, gitWorktrees)
   }

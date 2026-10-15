@@ -3,6 +3,7 @@ import {
   decodeTerminalStreamFrame,
   decodeTerminalStreamJson,
   decodeTerminalStreamText,
+  decodeTerminalInputAck,
   type TerminalStreamFrame
 } from '../../../shared/terminal-stream-protocol'
 import { deliverTerminalDataWithDeferredCredit } from '@/lib/pane-manager/terminal-delivery-credit'
@@ -25,34 +26,35 @@ export abstract class RemoteRuntimeTerminalBinaryController extends RemoteRuntim
       this.failConnection(new Error('Remote terminal stream received a malformed frame.'))
       return
     }
+    const isOutput =
+      frame.opcode === TerminalStreamOpcode.Output ||
+      frame.opcode === TerminalStreamOpcode.OutputSpan
     const stream = this.streams.get(frame.streamId)
     if (!stream) {
-      if (
-        frame.opcode === TerminalStreamOpcode.Output ||
-        frame.opcode === TerminalStreamOpcode.OutputSpan
-      ) {
+      if (isOutput) {
         // Why: the renderer already disposed this stream; unsubscribe releases server credit that cannot reach a parser.
         this.sendFrame(frame.streamId, TerminalStreamOpcode.Unsubscribe)
       }
       return
     }
-    if (
-      (frame.opcode === TerminalStreamOpcode.Output ||
-        frame.opcode === TerminalStreamOpcode.OutputSpan) &&
-      shouldDropE2eRemoteTerminalOutput(stream, frame.payload.byteLength)
-    ) {
+    if (isOutput && shouldDropE2eRemoteTerminalOutput(stream, frame.payload.byteLength)) {
       this.queueOutputAcknowledgement(stream, frame.payload.byteLength)
       return
     }
-    stream.watchdog.recordInbound()
+    // Control frames prove transport activity, not delivery of command output.
+    stream.watchdog.recordInbound(isOutput)
     if (frame.opcode === TerminalStreamOpcode.WriteUnavailable) {
       stream.callbacks.onWriteUnavailable?.()
       return
     }
-    if (
-      frame.opcode === TerminalStreamOpcode.Output ||
-      frame.opcode === TerminalStreamOpcode.OutputSpan
-    ) {
+    if (frame.opcode === TerminalStreamOpcode.InputAck) {
+      if (!stream.supportsInputAck) {
+        return
+      }
+      stream.callbacks.onInputAck?.(frame.seq, decodeTerminalInputAck(frame.payload))
+      return
+    }
+    if (isOutput) {
       this.handleOutputFrame(frame, stream)
       return
     }
